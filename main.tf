@@ -1,5 +1,8 @@
 provider "aws" {
-  region = "ap-southeast-2"  
+  region = "ap-southeast-2"
+}
+data "aws_vpc" "default" {
+  default = true
 }
 
 resource "aws_iam_role" "ec2_instance_role" {
@@ -22,7 +25,6 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
-
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
   name = "EC2InstanceProfile"
   role = aws_iam_role.ec2_instance_role.name
@@ -31,7 +33,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 resource "aws_security_group" "ec2_sg" {
   name        = "allow_ssh_http"
   description = "Allow SSH and HTTP inbound traffic"
-  vpc_id      = "vpc-07e75756a2cacf2a8"  # Update with your VPC ID
+  vpc_id      = data.aws_vpc.default.id  # Dynamically fetch the default VPC
 
   ingress {
     from_port   = 22
@@ -65,30 +67,33 @@ resource "aws_instance" "docker_ec2" {
 
   user_data = <<-EOF
     #!/bin/bash
-    # Update the system and install Docker
     sudo yum update -y
     sudo amazon-linux-extras install docker -y
     sudo service docker start
     sudo usermod -a -G docker ec2-user
 
-    # Install CloudWatch Logs agent
     sudo yum install -y awslogs
     sudo systemctl start awslogsd
     sudo systemctl enable awslogsd.service
 
-    # Configure Docker to log to CloudWatch Logs
+    aws logs create-log-group --log-group-name /aws/docker/backend-logs --region ap-southeast-2 || true
+
     cat <<EOT > /etc/docker/daemon.json
     {
       "log-driver": "awslogs",
       "log-opts": {
         "awslogs-region": "ap-southeast-2",
-        "awslogs-group": "docker-container-logs",
+        "awslogs-group": "/aws/docker/backend-logs",
+        "awslogs-stream": "backend-container-logs",
         "awslogs-create-group": "true"
       }
     }
     EOT
 
     sudo service docker restart
+
+    docker pull your-dockerhub-username/backend-image:latest
+    docker run -d --name backend-container your-dockerhub-username/backend-image:latest
   EOF
 
   tags = {
@@ -97,6 +102,6 @@ resource "aws_instance" "docker_ec2" {
 }
 
 resource "aws_cloudwatch_log_group" "docker_log_group" {
-  name = "docker-container-logs"
-  retention_in_days = 7  # Log retention (can adjust as needed)
+  name              = "/aws/docker/backend-logs"
+  retention_in_days = 7
 }
