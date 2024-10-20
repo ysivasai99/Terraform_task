@@ -88,7 +88,7 @@ resource "aws_instance" "docker_ec2" {
     aws logs create-log-group --log-group-name /aws/docker/backend-logs --region ap-southeast-2 || true
 
     # Configure Docker logging to CloudWatch
-    cat <<EOT | sudo tee /etc/docker/daemon.json
+    cat <<EOT > /etc/docker/daemon.json
     {
       "log-driver": "awslogs",
       "log-opts": {
@@ -101,7 +101,7 @@ resource "aws_instance" "docker_ec2" {
     EOT
 
     # Restart Docker service to apply changes
-    sudo systemctl restart docker
+    sudo service docker restart
 
     # Clone your GitHub repository
     git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend
@@ -110,13 +110,8 @@ resource "aws_instance" "docker_ec2" {
     # Build the Docker image
     docker build -t agri-pass-backend-image .
 
-    # Run the Docker container with AWS logs configuration
-    docker run -d --name backend-container \
-      --log-driver=awslogs \
-      --log-opt awslogs-region=ap-southeast-2 \
-      --log-opt awslogs-group=/aws/docker/backend-logs \
-      --log-opt awslogs-stream=backend-container-logs \
-      agri-pass-backend-image
+    # Run the Docker container
+    docker run -d --name backend-container agri-pass-backend-image
   EOF
 
   tags = {
@@ -130,37 +125,30 @@ resource "aws_cloudwatch_log_group" "docker_log_group" {
   retention_in_days = 7
 }
 
-# CloudWatch Metric Filter
+# CloudWatch Log Metric Filter
 resource "aws_cloudwatch_log_metric_filter" "error_filter" {
-  name            = "ErrorFilter"
-  log_group_name  = aws_cloudwatch_log_group.docker_log_group.name
+  name           = "ErrorFilter"
+  log_group_name = aws_cloudwatch_log_group.docker_log_group.name
+  pattern        = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
+
   metric_transformation {
     name      = "ErrorCount"
-    namespace = "DockerLogs"
+    namespace = "YourNamespace"
     value     = "1"
-    default_value = 0
   }
-
-  filter_pattern = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
 }
 
-# CloudWatch Alarm for Error Count
-resource "aws_cloudwatch_metric_alarm" "high_error_alarm" {
-  alarm_name          = "HighErrorCount"
+# CloudWatch Alarm for Errors
+resource "aws_cloudwatch_metric_alarm" "error_alarm" {
+  alarm_name          = "ErrorCountAlarm"
   comparison_operator  = "GreaterThanThreshold"
   evaluation_periods   = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].name
   namespace           = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].namespace
   period              = "60"
   statistic           = "Sum"
-  threshold           = "5"  # Set the threshold for the number of errors
-  alarm_description   = "Alarm when error count exceeds 5 in a minute"
-  actions_enabled     = true
-
-  # Optionally specify SNS topics for notifications
-  # alarm_actions       = [aws_sns_topic.your_sns_topic.arn]
-
-  dimensions = {
-    InstanceId = aws_instance.docker_ec2.id
-  }
+  threshold           = "0"
+  alarm_description   = "This alarm triggers when the error count exceeds 0."
+  alarm_actions       = []  # Specify SNS topic ARN or other action here if needed
+  dimensions          = {}
 }
