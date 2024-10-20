@@ -2,20 +2,13 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
-# Data source to fetch default VPC
+# Data source to fetch the default VPC
 data "aws_vpc" "default" {
   default = true
 }
 
-# Check if the IAM Role exists
-data "aws_iam_role" "existing_role" {
-  name = "EC2CloudWatchRole"
-}
-
 # IAM Role for EC2 instance
 resource "aws_iam_role" "ec2_instance_role" {
-  count = length(data.aws_iam_role.existing_role.id) > 0 ? 0 : 1
-
   name = "EC2CloudWatchRole"
 
   assume_role_policy = jsonencode({
@@ -32,24 +25,18 @@ resource "aws_iam_role" "ec2_instance_role" {
 
 # Attach CloudWatch policy to IAM Role
 resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
-  count = length(data.aws_iam_role.existing_role.id) > 0 ? 0 : 1
-
-  role       = aws_iam_role.ec2_instance_role[0].name
+  role       = aws_iam_role.ec2_instance_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  count = length(data.aws_iam_role.existing_role.id) > 0 ? 0 : 1
-
   name = "EC2InstanceProfile"
-  role = aws_iam_role.ec2_instance_role[0].name
+  role = aws_iam_role.ec2_instance_role.name
 }
 
 # Security Group
 resource "aws_security_group" "ec2_sg" {
-  count = length(data.aws_security_group.existing_sg.*.id) > 0 ? 0 : 1
-
   name        = "allow_ssh_http"
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
@@ -82,8 +69,8 @@ resource "aws_instance" "docker_ec2" {
   instance_type = "t2.micro"
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile[0].name
-  security_groups      = [aws_security_group.ec2_sg[0].name]
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
+  security_groups      = [aws_security_group.ec2_sg.name]
 
   user_data = <<-EOF
     #!/bin/bash
