@@ -85,7 +85,7 @@ resource "aws_instance" "docker_ec2" {
     {
       "log-driver": "awslogs",
       "log-opts": {
-        "awslogs-region": "us-east-1",
+        "awslogs-region": "ap-southeast-2",
         "awslogs-group": "docker-container-logs",
         "awslogs-create-group": "true"
       }
