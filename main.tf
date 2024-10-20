@@ -17,14 +17,14 @@ resource "aws_iam_role" "ec2_instance_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
+resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy1" {
   role       = aws_iam_role.ec2_instance_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "EC2InstanceProfile"
+resource "aws_iam_instance_profile" "ec2_instance_profile1" {
+  name = "EC2InstanceProfile1"
   role = aws_iam_role.ec2_instance_role.name
 }
 
