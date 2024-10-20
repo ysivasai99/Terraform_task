@@ -15,12 +15,10 @@ resource "aws_instance" "docker_ec2" {
     sudo service docker start
     sudo usermod -a -G docker ec2-user
 
-    # Install AWS CloudWatch Logs agent
     sudo yum install -y awslogs
     sudo systemctl start awslogsd
     sudo systemctl enable awslogsd.service
 
-    # Configure Docker to log to CloudWatch Logs
     cat <<EOT > /etc/docker/daemon.json
     {
       "log-driver": "awslogs",
