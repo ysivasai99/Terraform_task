@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "ap-southeast-2"  # Change this to your desired region
+  region = "ap-southeast-2"  
 }
 
 resource "aws_iam_role" "ec2_instance_role" {
