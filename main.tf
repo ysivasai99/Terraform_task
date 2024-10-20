@@ -88,7 +88,7 @@ resource "aws_instance" "docker_ec2" {
     aws logs create-log-group --log-group-name /aws/docker/backend-logs --region ap-southeast-2 || true
 
     # Configure Docker logging to CloudWatch
-    cat <<EOT > /etc/docker/daemon.json
+    cat <<EOT | sudo tee /etc/docker/daemon.json
     {
       "log-driver": "awslogs",
       "log-opts": {
@@ -101,7 +101,7 @@ resource "aws_instance" "docker_ec2" {
     EOT
 
     # Restart Docker service to apply changes
-    sudo service docker restart
+    sudo systemctl restart docker
 
     # Clone your GitHub repository
     git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend
@@ -110,8 +110,13 @@ resource "aws_instance" "docker_ec2" {
     # Build the Docker image
     docker build -t agri-pass-backend-image .
 
-    # Run the Docker container
-    docker run -d --name backend-container agri-pass-backend-image
+    # Run the Docker container with AWS logs configuration
+    docker run -d --name backend-container \
+      --log-driver=awslogs \
+      --log-opt awslogs-region=ap-southeast-2 \
+      --log-opt awslogs-group=/aws/docker/backend-logs \
+      --log-opt awslogs-stream=backend-container-logs \
+      agri-pass-backend-image
   EOF
 
   tags = {
