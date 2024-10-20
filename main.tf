@@ -129,3 +129,38 @@ resource "aws_cloudwatch_log_group" "docker_log_group" {
   name              = "/aws/docker/backend-logs"
   retention_in_days = 7
 }
+
+# CloudWatch Metric Filter
+resource "aws_cloudwatch_log_metric_filter" "error_filter" {
+  name            = "ErrorFilter"
+  log_group_name  = aws_cloudwatch_log_group.docker_log_group.name
+  metric_transformation {
+    name      = "ErrorCount"
+    namespace = "DockerLogs"
+    value     = "1"
+    default_value = 0
+  }
+
+  filter_pattern = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
+}
+
+# CloudWatch Alarm for Error Count
+resource "aws_cloudwatch_metric_alarm" "high_error_alarm" {
+  alarm_name          = "HighErrorCount"
+  comparison_operator  = "GreaterThanThreshold"
+  evaluation_periods   = "1"
+  metric_name         = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].name
+  namespace           = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].namespace
+  period              = "60"
+  statistic           = "Sum"
+  threshold           = "5"  # Set the threshold for the number of errors
+  alarm_description   = "Alarm when error count exceeds 5 in a minute"
+  actions_enabled     = true
+
+  # Optionally specify SNS topics for notifications
+  # alarm_actions       = [aws_sns_topic.your_sns_topic.arn]
+
+  dimensions = {
+    InstanceId = aws_instance.docker_ec2.id
+  }
+}
