@@ -28,10 +28,10 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
   role = aws_iam_role.ec2_instance_role.name
 }
 
-resource "aws_security_group" "ec2_sg" {
+resource "aws_security_group" "ec2_sg1" {
   name        = "allow_ssh_http"
   description = "Allow SSH and HTTP inbound traffic"
-  vpc_id      = "vpc-07e75756a2cacf2a8"  
+  vpc_id      = "vpc-00125d99e226aee56"  
 
   ingress {
     from_port   = 22
@@ -61,7 +61,7 @@ resource "aws_instance" "docker_ec2" {
   key_name      = "personalawskey"  
 
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
-  security_groups      = [aws_security_group.ec2_sg.name]
+  security_groups      = [aws_security_group.ec2_sg1.name]
 
   user_data = <<-EOF
     #!/bin/bash
