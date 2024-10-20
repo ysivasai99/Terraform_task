@@ -37,7 +37,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 
 # Security Group
 resource "aws_security_group" "ec2_sg" {
-  name        = "allow_ssh_http_new"  # Changed name to avoid conflict
+  name        = "AllowSSHHTTPTraffic"  # Changed name to avoid conflict
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
