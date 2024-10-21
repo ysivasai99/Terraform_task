@@ -112,6 +112,8 @@ resource "aws_instance" "docker_ec2" {
 
     # Run the Docker container
     docker run -d --name backend-container agri-pass-backend-image
+    docker run -it --log-driver=awslogs --log-opt awslogs-region=ap-southeast-2     --log-opt awslogs-group=myLogGroup --log-opt awslogs-create-group=true  node:alpine
+
   EOF
 
   tags = {
