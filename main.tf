@@ -7,9 +7,9 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# IAM Role for EC2 instance
-resource "aws_iam_role" "role_ec2_cloudwatch_logging" {
-  name = "EC2RoleCloudWatchLoggingUnique2024"  # Unique name
+# IAM Role for EC2 instance to allow logging to CloudWatch
+resource "aws_iam_role" "ec2_cloudwatch_logs_role" {
+  name = "EC2-CloudWatch-Logs-Role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -23,21 +23,21 @@ resource "aws_iam_role" "role_ec2_cloudwatch_logging" {
   })
 }
 
-# Attach CloudWatch policy to IAM Role
-resource "aws_iam_role_policy_attachment" "attachment_cloudwatch_policy" {
-  role       = aws_iam_role.role_ec2_cloudwatch_logging.name
+# Attach CloudWatch Logs Policy to IAM Role
+resource "aws_iam_role_policy_attachment" "cloudwatch_logs_attachment" {
+  role       = aws_iam_role.ec2_cloudwatch_logs_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 # IAM Instance Profile
-resource "aws_iam_instance_profile" "profile_ec2_logging" {
-  name = "EC2InstanceProfileCloudWatchUnique2024"  # Unique name
-  role = aws_iam_role.role_ec2_cloudwatch_logging.name
+resource "aws_iam_instance_profile" "ec2_cloudwatch_logs_profile" {
+  name = "EC2-CloudWatch-Logs-Instance-Profile"
+  role = aws_iam_role.ec2_cloudwatch_logs_role.name
 }
 
 # Security Group
-resource "aws_security_group" "sg_ec2_http_ssh" {
-  name        = "SGAllowSSHHTTPUnique2024"  # Unique name
+resource "aws_security_group" "ec2_security_group" {
+  name        = "SG-EC2-Docker-Logging"
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -63,100 +63,46 @@ resource "aws_security_group" "sg_ec2_http_ssh" {
   }
 }
 
-# EC2 Instance
-resource "aws_instance" "instance_docker_backend" {
-  ami           = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
-  instance_type = "t2.micro"
-  key_name      = "personalawskey"  # Update with your EC2 Key Pair
+# CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "docker_logs" {
+  name              = "docker-container-logs"
+  retention_in_days = 7
+}
 
-  iam_instance_profile = aws_iam_instance_profile.profile_ec2_logging.name
-  security_groups      = [aws_security_group.sg_ec2_http_ssh.name]
+# EC2 Instance with Docker
+resource "aws_instance" "docker_ec2_instance" {
+  ami                    = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
+  instance_type         = "t2.micro"
+  key_name              = "personalawskey"  # Update with your EC2 Key Pair
+  iam_instance_profile   = aws_iam_instance_profile.ec2_cloudwatch_logs_profile.name
+  security_groups        = [aws_security_group.ec2_security_group.name]
 
   user_data = <<-EOF
     #!/bin/bash
-    # Update and install necessary packages
+    # Install Docker
     sudo yum update -y
-    sudo yum install -y git
     sudo amazon-linux-extras install -y docker
     sudo service docker start
     sudo usermod -a -G docker ec2-user
 
-    # Install CloudWatch Logs agent
-    sudo yum install -y awslogs
-    sudo systemctl start awslogsd
-    sudo systemctl enable awslogsd.service
+    # Pull your Docker image (replace this with your actual image)
+    docker pull your-docker-image
 
-    # Create CloudWatch log group
-    aws logs create-log-group --log-group-name /aws/docker/backend-logs --region ap-southeast-2 || true
-
-    # Configure Docker logging to CloudWatch
-    cat <<EOT | sudo tee /etc/docker/daemon.json
-    {
-      "log-driver": "awslogs",
-      "log-opts": {
-        "awslogs-region": "ap-southeast-2",
-        "awslogs-group": "/aws/docker/backend-logs",
-        "awslogs-stream": "backend-log-stream",
-        "awslogs-create-group": "true"
-      }
-    }
-    EOT
-
-    # Restart Docker service to apply changes
-    sudo systemctl restart docker
-
-    # Clone your GitHub repository
-    git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend
-
-    cd /home/ec2-user/agri-pass-backend
-    # Build the Docker image
-    docker build -t agri-pass-backend-image .
-
-    # Run the Docker container
-    docker run -d --name backend-container agri-pass-backend-image
+    # Run the Docker container with CloudWatch logging
+    docker run -d \
+      --log-driver=awslogs \
+      --log-opt awslogs-region=ap-southeast-2 \
+      --log-opt awslogs-group=docker-container-logs \
+      --log-opt awslogs-stream=docker-container-stream \
+      your-docker-image
   EOF
 
   tags = {
-    Name = "DockerBackendInstanceUnique2024"
+    Name = "DockerLoggingEC2Instance"
   }
 }
 
-# CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "log_group_backend" {
-  name              = "/aws/docker/backend-logs"
-  retention_in_days = 7
-}
-
-# CloudWatch Log Stream
-resource "aws_cloudwatch_log_stream" "stream_backend_logs" {
-  name           = "backend-log-stream"  # Descriptive name
-  log_group_name = aws_cloudwatch_log_group.log_group_backend.name
-}
-
-# CloudWatch Log Metric Filter
-resource "aws_cloudwatch_log_metric_filter" "filter_error_logs" {
-  name           = "ErrorLogFilterUnique2024"  # Unique name
-  log_group_name = aws_cloudwatch_log_group.log_group_backend.name
-  pattern        = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
-
-  metric_transformation {
-    name      = "ErrorCount"
-    namespace = "YourNamespace"
-    value     = "1"
-  }
-}
-
-# CloudWatch Alarm for Errors
-resource "aws_cloudwatch_metric_alarm" "alarm_error_count" {
-  alarm_name          = "ErrorCountAlarmUnique2024"  # Unique name
-  comparison_operator  = "GreaterThanThreshold"
-  evaluation_periods   = "1"
-  metric_name         = aws_cloudwatch_log_metric_filter.filter_error_logs.metric_transformation[0].name
-  namespace           = aws_cloudwatch_log_metric_filter.filter_error_logs.metric_transformation[0].namespace
-  period              = "60"
-  statistic           = "Sum"
-  threshold           = "0"
-  alarm_description   = "This alarm triggers when the error count exceeds 0."
-  alarm_actions       = []  # Specify SNS topic ARN or other action here if needed
-  dimensions          = {}
+# Output the Instance ID
+output "instance_id" {
+  value = aws_instance.docker_ec2_instance.id
 }
