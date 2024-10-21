@@ -8,8 +8,8 @@ data "aws_vpc" "default" {
 }
 
 # IAM Role for EC2 instance
-resource "aws_iam_role" "ec2_instance_role" {
-  name = "EC2CloudWatchRoleNew1"  # Changed name to avoid conflict
+resource "aws_iam_role" "role_ec2_cloudwatch_logging" {
+  name = "EC2RoleCloudWatchLogging"  # Descriptive name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -24,20 +24,20 @@ resource "aws_iam_role" "ec2_instance_role" {
 }
 
 # Attach CloudWatch policy to IAM Role
-resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
-  role       = aws_iam_role.ec2_instance_role.name
+resource "aws_iam_role_policy_attachment" "attachment_cloudwatch_policy" {
+  role       = aws_iam_role.role_ec2_cloudwatch_logging.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 # IAM Instance Profile
-resource "aws_iam_instance_profile" "ec2_instance_profile22" {
-  name = "EC2InstanceProfileUnique5"  # Changed name to avoid conflict
-  role = aws_iam_role.ec2_instance_role.name
+resource "aws_iam_instance_profile" "profile_ec2_logging" {
+  name = "EC2InstanceProfileCloudWatch"  # Descriptive name
+  role = aws_iam_role.role_ec2_cloudwatch_logging.name
 }
 
 # Security Group
-resource "aws_security_group" "myec2sg1" {
-  name        = "AllowSSHHTTPTraffic"  # Changed name to avoid conflict
+resource "aws_security_group" "sg_ec2_http_ssh" {
+  name        = "SGAllowSSHHTTP"  # Descriptive name
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -64,13 +64,13 @@ resource "aws_security_group" "myec2sg1" {
 }
 
 # EC2 Instance
-resource "aws_instance" "docker_ec22" {
+resource "aws_instance" "instance_docker_backend" {
   ami           = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type = "t2.micro"
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile22.name
-  security_groups      = [aws_security_group.myec2sg1.name]
+  iam_instance_profile = aws_iam_instance_profile.profile_ec2_logging.name
+  security_groups      = [aws_security_group.sg_ec2_http_ssh.name]
 
   user_data = <<-EOF
     #!/bin/bash
@@ -86,7 +86,7 @@ resource "aws_instance" "docker_ec22" {
     sudo systemctl enable awslogsd.service
 
     # Create CloudWatch log group
-    aws logs create-log-group --log-group-name /aws/docker/backend-logs1 --region ap-southeast-2 || true
+    aws logs create-log-group --log-group-name /aws/docker/backend-logs --region ap-southeast-2 || true
 
     # Configure Docker logging to CloudWatch
     cat <<EOT > /etc/docker/daemon.json
@@ -94,7 +94,7 @@ resource "aws_instance" "docker_ec22" {
       "log-driver": "awslogs",
       "log-opts": {
         "awslogs-region": "ap-southeast-2",
-        "awslogs-group": "/aws/docker/backend-logs1",
+        "awslogs-group": "/aws/docker/backend-logs",
         "awslogs-stream": "backend-log-stream",
         "awslogs-create-group": "true"
       }
@@ -116,26 +116,26 @@ resource "aws_instance" "docker_ec22" {
   EOF
 
   tags = {
-    Name = "DockerInstance1"
+    Name = "DockerBackendInstance"
   }
 }
 
 # CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "docker_log_group1" {
-  name              = "/aws/docker/backend-logs1"
+resource "aws_cloudwatch_log_group" "log_group_backend" {
+  name              = "/aws/docker/backend-logs"
   retention_in_days = 7
 }
 
 # CloudWatch Log Stream
-resource "aws_cloudwatch_log_stream" "backend_log_stream" {
-  name           = "backend-log-stream"  # Ensure this name matches the existing log stream
-  log_group_name = aws_cloudwatch_log_group.docker_log_group1.name
+resource "aws_cloudwatch_log_stream" "stream_backend_logs" {
+  name           = "backend-log-stream"  # Descriptive name
+  log_group_name = aws_cloudwatch_log_group.log_group_backend.name
 }
 
 # CloudWatch Log Metric Filter
-resource "aws_cloudwatch_log_metric_filter" "error_filter" {
-  name           = "ErrorFilter"
-  log_group_name = aws_cloudwatch_log_group.docker_log_group1.name
+resource "aws_cloudwatch_log_metric_filter" "filter_error_logs" {
+  name           = "ErrorLogFilter"
+  log_group_name = aws_cloudwatch_log_group.log_group_backend.name
   pattern        = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
 
   metric_transformation {
@@ -146,12 +146,12 @@ resource "aws_cloudwatch_log_metric_filter" "error_filter" {
 }
 
 # CloudWatch Alarm for Errors
-resource "aws_cloudwatch_metric_alarm" "error_alarm" {
+resource "aws_cloudwatch_metric_alarm" "alarm_error_count" {
   alarm_name          = "ErrorCountAlarm"
   comparison_operator  = "GreaterThanThreshold"
   evaluation_periods   = "1"
-  metric_name         = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].name
-  namespace           = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.filter_error_logs.metric_transformation[0].name
+  namespace           = aws_cloudwatch_log_metric_filter.filter_error_logs.metric_transformation[0].namespace
   period              = "60"
   statistic           = "Sum"
   threshold           = "0"
