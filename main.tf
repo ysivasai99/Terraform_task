@@ -14,7 +14,8 @@ data "aws_iam_instance_profile" "existing_instance_profile" {
 
 # IAM Role for EC2 instance to allow logging to CloudWatch (only create if it doesn't exist)
 resource "aws_iam_role" "ec2_cloudwatch_logs_role" {
-  name = "EC2-CloudWatch-Logs-Role-Unique"
+  count = length(data.aws_iam_instance_profile.existing_instance_profile.arn) == 0 ? 1 : 0
+  name  = "EC2-CloudWatch-Logs-Role-Unique"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -30,7 +31,8 @@ resource "aws_iam_role" "ec2_cloudwatch_logs_role" {
 
 # Attach CloudWatch Logs Policy to IAM Role
 resource "aws_iam_role_policy_attachment" "cloudwatch_logs_attachment" {
-  role       = aws_iam_role.ec2_cloudwatch_logs_role.name
+  count      = length(data.aws_iam_instance_profile.existing_instance_profile.arn) == 0 ? 1 : 0
+  role       = aws_iam_role.ec2_cloudwatch_logs_role[count.index].name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
@@ -38,7 +40,7 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_logs_attachment" {
 resource "aws_iam_instance_profile" "ec2_cloudwatch_logs_profile" {
   count = length(data.aws_iam_instance_profile.existing_instance_profile.arn) == 0 ? 1 : 0
   name  = "EC2-CloudWatch-Logs-Instance-Profile-Unique"
-  role  = aws_iam_role.ec2_cloudwatch_logs_role.name
+  role  = aws_iam_role.ec2_cloudwatch_logs_role[count.index].name
 }
 
 # Data source to check if Security Group already exists
@@ -109,8 +111,16 @@ resource "aws_instance" "docker_ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type          = "t2.micro"
   key_name               = "personalawskey"  # Replace with your EC2 key pair
-  iam_instance_profile   = aws_iam_instance_profile.ec2_cloudwatch_logs_profile[0].name
-  security_groups        = [aws_security_group.ec2_security_group[0].name]
+
+  # If the instance profile exists, reference it; otherwise, use the created one
+  iam_instance_profile   = length(data.aws_iam_instance_profile.existing_instance_profile.arn) > 0 ? 
+                           data.aws_iam_instance_profile.existing_instance_profile.arn : 
+                           aws_iam_instance_profile.ec2_cloudwatch_logs_profile[0].name
+
+  # If the security group exists, reference it; otherwise, use the created one
+  security_groups        = length(data.aws_security_group.existing_security_group.id) > 0 ? 
+                           [data.aws_security_group.existing_security_group.name] : 
+                           [aws_security_group.ec2_security_group[0].name]
 
   user_data = <<-EOF
     #!/bin/bash
