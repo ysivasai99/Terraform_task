@@ -9,7 +9,7 @@ data "aws_vpc" "default" {
 
 # IAM Role for EC2 instance to allow logging to CloudWatch
 resource "aws_iam_role" "ec2_cloudwatch_logs_role" {
-  name = "EC2-CloudWatch-Logs-Role-Unique"  # Changed to a unique name
+  name = "EC2-CloudWatch-Logs-Role-Unique"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -31,13 +31,13 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_logs_attachment" {
 
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_cloudwatch_logs_profile" {
-  name = "EC2-CloudWatch-Logs-Instance-Profile-Unique"  # Changed to a unique name
+  name = "EC2-CloudWatch-Logs-Instance-Profile-Unique"
   role = aws_iam_role.ec2_cloudwatch_logs_role.name
 }
 
 # Security Group for EC2
 resource "aws_security_group" "ec2_security_group" {
-  name        = "SG-EC2-Docker-Logging-Unique"  # Changed to a unique name
+  name        = "SG-EC2-Docker-Logging-Unique"
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -63,16 +63,28 @@ resource "aws_security_group" "ec2_security_group" {
   }
 }
 
-# CloudWatch Log Group for EC2 Logs
-resource "aws_cloudwatch_log_group" "ec2_logs" {
+# CloudWatch Log Group for EC2 instance logs
+resource "aws_cloudwatch_log_group" "ec2_logs_group" {
   name              = "/aws/ec2/instance-logs"
   retention_in_days = 7
 }
 
-# CloudWatch Log Group for Docker Logs
-resource "aws_cloudwatch_log_group" "docker_logs" {
+# CloudWatch Log Group for Docker container logs
+resource "aws_cloudwatch_log_group" "docker_logs_group" {
   name              = "/aws/docker/container-logs"
   retention_in_days = 7
+}
+
+# CloudWatch Log Stream for EC2 logs
+resource "aws_cloudwatch_log_stream" "ec2_log_stream" {
+  name           = "ec2-instance-log-stream"
+  log_group_name = aws_cloudwatch_log_group.ec2_logs_group.name
+}
+
+# CloudWatch Log Stream for Docker logs
+resource "aws_cloudwatch_log_stream" "docker_log_stream" {
+  name           = "docker-container-log-stream"
+  log_group_name = aws_cloudwatch_log_group.docker_logs_group.name
 }
 
 # EC2 Instance with Docker installed, Git installation, and logging configured
@@ -104,14 +116,14 @@ resource "aws_instance" "docker_ec2_instance" {
 
     [/var/log/messages]
     file = /var/log/messages
-    log_group_name = ${aws_cloudwatch_log_group.ec2_logs.name}
-    log_stream_name = {instance_id}
+    log_group_name = ${aws_cloudwatch_log_group.ec2_logs_group.name}
+    log_stream_name = ${aws_cloudwatch_log_stream.ec2_log_stream.name}
     datetime_format = %b %d %H:%M:%S
 
     [/var/log/cloud-init.log]
     file = /var/log/cloud-init.log
-    log_group_name = ${aws_cloudwatch_log_group.ec2_logs.name}
-    log_stream_name = {instance_id}
+    log_group_name = ${aws_cloudwatch_log_group.ec2_logs_group.name}
+    log_stream_name = ${aws_cloudwatch_log_stream.ec2_log_stream.name}
     datetime_format = %b %d %H:%M:%S
     EOT
 
@@ -123,7 +135,7 @@ resource "aws_instance" "docker_ec2_instance" {
     # Clone Git repository (replace the URL with your repository)
     git clone https://github.com/your-username/your-repository.git /home/ec2-user/your-repository
 
-    # Navigate to the repository directory (if necessary for further commands)
+    # Navigate to the repository directory
     cd /home/ec2-user/your-repository
 
     # Pull your Docker image (replace with your actual image)
@@ -133,8 +145,8 @@ resource "aws_instance" "docker_ec2_instance" {
     docker run -d \
       --log-driver=awslogs \
       --log-opt awslogs-region=ap-southeast-2 \
-      --log-opt awslogs-group=${aws_cloudwatch_log_group.docker_logs.name} \
-      --log-opt awslogs-stream=backend-container-logs \
+      --log-opt awslogs-group=${aws_cloudwatch_log_group.docker_logs_group.name} \
+      --log-opt awslogs-stream=${aws_cloudwatch_log_stream.docker_log_stream.name} \
       your-docker-image
   EOF
 
