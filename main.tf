@@ -31,13 +31,13 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
 
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "EC2InstanceProfileNew"  # Changed name to avoid conflict
+  name = "EC2InstanceProfileUnique2024"  # Changed name to avoid conflict
   role = aws_iam_role.ec2_instance_role.name
 }
 
 # Security Group
 resource "aws_security_group" "ec2_sg" {
-  name        = "AllowSSHHTTPTrafficNew"  # Changed name to avoid conflict
+  name        = "AllowSSHHTTPTraffic"  # Changed name to avoid conflict
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -88,9 +88,6 @@ resource "aws_instance" "docker_ec2" {
     # Create CloudWatch log group
     aws logs create-log-group --log-group-name /aws/docker/backend-logs --region ap-southeast-2 || true
 
-    # Create CloudWatch log stream
-    aws logs create-log-stream --log-group-name /aws/docker/backend-logs --log-stream-name backend-log-stream --region ap-southeast-2 || true
-
     # Configure Docker logging to CloudWatch
     cat <<EOT > /etc/docker/daemon.json
     {
@@ -98,7 +95,7 @@ resource "aws_instance" "docker_ec2" {
       "log-opts": {
         "awslogs-region": "ap-southeast-2",
         "awslogs-group": "/aws/docker/backend-logs",
-        "awslogs-stream": "backend-log-stream",
+        "awslogs-stream": "backend-container-logs",
         "awslogs-create-group": "true"
       }
     }
@@ -119,7 +116,7 @@ resource "aws_instance" "docker_ec2" {
   EOF
 
   tags = {
-    Name = "DockerInstanceNew"
+    Name = "DockerInstance"
   }
 }
 
@@ -129,28 +126,22 @@ resource "aws_cloudwatch_log_group" "docker_log_group" {
   retention_in_days = 7
 }
 
-# CloudWatch Log Stream
-resource "aws_cloudwatch_log_stream" "backend_log_stream" {
-  name           = "backend-log-stream"
-  log_group_name = aws_cloudwatch_log_group.docker_log_group.name
-}
-
 # CloudWatch Log Metric Filter
 resource "aws_cloudwatch_log_metric_filter" "error_filter" {
-  name           = "ErrorFilterNew"
+  name           = "ErrorFilter"
   log_group_name = aws_cloudwatch_log_group.docker_log_group.name
   pattern        = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
 
   metric_transformation {
-    name      = "ErrorCountNew"
-    namespace = "YourNamespaceNew"
+    name      = "ErrorCount"
+    namespace = "YourNamespace"
     value     = "1"
   }
 }
 
 # CloudWatch Alarm for Errors
 resource "aws_cloudwatch_metric_alarm" "error_alarm" {
-  alarm_name          = "ErrorCountAlarmNew"
+  alarm_name          = "ErrorCountAlarm"
   comparison_operator  = "GreaterThanThreshold"
   evaluation_periods   = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].name
