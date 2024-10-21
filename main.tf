@@ -9,7 +9,7 @@ data "aws_vpc" "default" {
 
 # IAM Role for EC2 instance
 resource "aws_iam_role" "ec2_instance_role" {
-  name = "EC2CloudWatchRoleUnique2"  # Updated name to avoid conflict
+  name = "EC2CloudWatchRoleUnique4"  # Updated name to avoid conflict
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -31,13 +31,13 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
 
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "EC2InstanceProfileUnique3"  # Updated name to avoid conflict
+  name = "EC2InstanceProfileUnique4"  # Updated name to avoid conflict
   role = aws_iam_role.ec2_instance_role.name
 }
 
 # Security Group
-resource "aws_security_group" "ec2_sg" {
-  name        = "AllowSSHHTTPTrafficUnique1"  # Updated name to avoid conflict
+resource "aws_security_group" "ec2_sg2" {  # Keep this name to avoid conflict with the existing state
+  name        = "AllowSSHHTTPTrafficUnique2"  # Updated name to avoid conflict
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -70,7 +70,7 @@ resource "aws_instance" "docker_ec2" {
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
-  security_groups      = [aws_security_group.ec2_sg.name]
+  security_groups      = [aws_security_group.ec2_sg2.name]  # Make sure the security group matches
 
   user_data = <<-EOF
     #!/bin/bash
@@ -85,7 +85,7 @@ resource "aws_instance" "docker_ec2" {
     sudo systemctl enable awslogsd.service
 
     # Create CloudWatch log group
-    aws logs create-log-group --log-group-name /aws/docker/backend-logs-unique --region ap-southeast-2 || true
+    aws logs create-log-group --log-group-name /aws/docker/backend-logs-unique2 --region ap-southeast-2 || true
 
     # Configure Docker logging to CloudWatch
     cat <<EOT > /etc/docker/daemon.json
@@ -93,7 +93,7 @@ resource "aws_instance" "docker_ec2" {
       "log-driver": "awslogs",
       "log-opts": {
         "awslogs-region": "ap-southeast-2",
-        "awslogs-group": "/aws/docker/backend-logs-unique",
+        "awslogs-group": "/aws/docker/backend-logs-unique2",
         "awslogs-stream": "backend-container-logs",
         "awslogs-create-group": "true"
       }
@@ -114,7 +114,7 @@ resource "aws_instance" "docker_ec2" {
     docker run -d --name backend-container \
     --log-driver=awslogs \
     --log-opt awslogs-region=ap-southeast-2 \
-    --log-opt awslogs-group=/aws/docker/backend-logs-unique \
+    --log-opt awslogs-group=/aws/docker/backend-logs-unique2 \
     --log-opt awslogs-create-group=true \
     agri-pass-backend-image
 
@@ -127,13 +127,13 @@ resource "aws_instance" "docker_ec2" {
 
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "docker_log_group" {
-  name              = "/aws/docker/backend-logs-unique"  # Updated name to avoid conflict
+  name              = "/aws/docker/backend-logs-unique2"  # Updated name to avoid conflict
   retention_in_days = 7
 }
 
 # CloudWatch Log Metric Filter
 resource "aws_cloudwatch_log_metric_filter" "error_filter" {
-  name           = "ErrorFilter"
+  name           = "ErrorFilterUnique"
   log_group_name = aws_cloudwatch_log_group.docker_log_group.name
   pattern        = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
 
