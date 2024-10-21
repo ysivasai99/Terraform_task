@@ -2,8 +2,8 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
-resource "aws_instance" "agri_pass_ec2_instance" {
-  ami           = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
+resource "aws_instance" "agri_pass_ec2" {
+  ami           = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI
   instance_type = "t2.micro"                # Use appropriate instance type
   key_name      = "personalawskey"          # Use the existing key pair
 
@@ -19,18 +19,16 @@ resource "aws_instance" "agri_pass_ec2_instance" {
     service docker start
     usermod -a -G docker ec2-user
 
-    # Install CloudWatch Logs agent
-    yum install -y amazon-cloudwatch-agent
-
     # Clone the backend repository
-    git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend
+    cd /home/ec2-user
+    git clone https://github.com/agri-pass/agri-pass-backend.git
 
-    # Run the Docker container
+    # Ensure Docker is running the backend
     cd /home/ec2-user/agri-pass-backend
     docker build -t agri-pass-backend .
     docker run -d --name agri-pass-backend -p 80:80 agri-pass-backend
 
-    # Create the CloudWatch Logs config file
+    # Create CloudWatch Logs agent config
     cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<-CWLOGCONFIG
     {
       "logs": {
@@ -40,7 +38,8 @@ resource "aws_instance" "agri_pass_ec2_instance" {
               {
                 "file_path": "/var/lib/docker/containers/*/*.log",
                 "log_group_name": "${aws_cloudwatch_log_group.agri_pass_log_group.name}",
-                "log_stream_name": "{instance_id}"
+                "log_stream_name": "{instance_id}",
+                "timezone": "UTC"
               }
             ]
           }
@@ -49,9 +48,9 @@ resource "aws_instance" "agri_pass_ec2_instance" {
     }
     CWLOGCONFIG
 
-    # Start the CloudWatch agent
+    # Install and start the CloudWatch Logs agent
+    yum install -y amazon-cloudwatch-agent
     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
-
   EOF
 
   tags = {
@@ -117,4 +116,9 @@ resource "aws_iam_role_policy_attachment" "ec2_cloudwatch_policy" {
 resource "aws_cloudwatch_log_group" "agri_pass_log_group" {
   name              = "/var/log/agri-pass-backend"
   retention_in_days = 14  # Adjust log retention as needed
+}
+
+resource "aws_cloudwatch_log_stream" "agri_pass_log_stream" {
+  name              = "agri_pass_backend_log_stream"
+  log_group_name    = aws_cloudwatch_log_group.agri_pass_log_group.name
 }
