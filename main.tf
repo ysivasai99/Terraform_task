@@ -30,14 +30,14 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
 }
 
 # IAM Instance Profile
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "EC2InstanceProfileUnique"  # Changed name to avoid conflict
+resource "aws_iam_instance_profile" "ec2_instance_profile3" {
+  name = "EC2InstanceProfileUnique2"  # Changed name to avoid conflict
   role = aws_iam_role.ec2_instance_role.name
 }
 
 # Security Group
-resource "aws_security_group" "ec2_sg" {
-  name        = "AllowSSHHTTPTraffic"  # Changed name to avoid conflict
+resource "aws_security_group" "ec2_sg2" {
+  name        = "AllowSSHHTTPTraffic1"  # Changed name to avoid conflict
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
