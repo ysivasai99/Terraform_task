@@ -69,7 +69,7 @@ resource "aws_instance" "docker_ec22" {
   instance_type = "t2.micro"
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile1.name
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile11.name
   security_groups      = [aws_security_group.myec2sg1.name]
 
   user_data = <<-EOF
