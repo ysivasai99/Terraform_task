@@ -27,7 +27,7 @@ cat <<EOL > /etc/cloudwatch-agent-config.json
         "collect_list": [
           {
             "file_path": "/var/lib/docker/containers/*/*.log",
-            "log_group_name": "${aws_cloudwatch_log_group.docker_log_group.name}",
+            "log_group_name": "/aws/docker/backend-logs-unique-2024",
             "log_stream_name": "{instance_id}",
             "retention_in_days": 14
           }
