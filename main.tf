@@ -95,7 +95,7 @@ resource "aws_instance" "docker_ec2" {
       "log-opts": {
         "awslogs-region": "ap-southeast-2",
         "awslogs-group": "/aws/docker/backend-logs",
-        "awslogs-stream": "backend-container-logs",
+        "awslogs-stream": "backend-log-stream",
         "awslogs-create-group": "true"
       }
     }
@@ -124,6 +124,12 @@ resource "aws_instance" "docker_ec2" {
 resource "aws_cloudwatch_log_group" "docker_log_group" {
   name              = "/aws/docker/backend-logs"
   retention_in_days = 7
+}
+
+# CloudWatch Log Stream
+resource "aws_cloudwatch_log_stream" "backend_log_stream" {
+  name           = "backend-log-stream"  # Specify the log stream name
+  log_group_name = aws_cloudwatch_log_group.docker_log_group.name
 }
 
 # CloudWatch Log Metric Filter
