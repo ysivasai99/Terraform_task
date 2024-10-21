@@ -30,7 +30,7 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
 }
 
 # IAM Instance Profile
-resource "aws_iam_instance_profile" "ec2_instance_profile1" {
+resource "aws_iam_instance_profile" "ec2_instance_profile11" {
   name = "EC2InstanceProfileUnique20244"  # Changed name to avoid conflict
   role = aws_iam_role.ec2_instance_role.name
 }
@@ -69,7 +69,7 @@ resource "aws_instance" "docker_ec22" {
   instance_type = "t2.micro"
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile1.name
   security_groups      = [aws_security_group.myec2sg1.name]
 
   user_data = <<-EOF
