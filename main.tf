@@ -63,9 +63,15 @@ resource "aws_security_group" "ec2_security_group" {
   }
 }
 
-# CloudWatch Log Group
+# CloudWatch Log Group for Docker Logs
 resource "aws_cloudwatch_log_group" "docker_logs" {
   name              = "docker-container-logs"
+  retention_in_days = 7
+}
+
+# CloudWatch Log Group for EC2 Logs
+resource "aws_cloudwatch_log_group" "ec2_logs" {
+  name              = "ec2-instance-logs"
   retention_in_days = 7
 }
 
@@ -79,11 +85,46 @@ resource "aws_instance" "docker_ec2_instance" {
 
   user_data = <<-EOF
     #!/bin/bash
-    # Install Docker
+    # Install Docker and CloudWatch Logs agent
     sudo yum update -y
+	git clone https://github.com/agri-pass/agri-pass-backend.git
+    cd agri-pass-backend
+    docker build -t agri-pass-backend-image .
     sudo amazon-linux-extras install -y docker
     sudo service docker start
     sudo usermod -a -G docker ec2-user
+
+    # Install CloudWatch Logs agent
+    sudo yum install -y awslogs
+    sudo systemctl start awslogsd
+    sudo systemctl enable awslogsd.service
+
+    # Configure CloudWatch Logs agent
+    cat <<EOT >> /etc/awslogs/awslogs.conf
+    [general]
+    state_file = /var/lib/awslogs/agent-state
+
+    [/var/log/messages]
+    file = /var/log/messages
+    log_group_name = ${aws_cloudwatch_log_group.ec2_logs.name}
+    log_stream_name = {instance_id}
+    datetime_format = %b %d %H:%M:%S
+
+    [/var/log/cloud-init.log]
+    file = /var/log/cloud-init.log
+    log_group_name = ${aws_cloudwatch_log_group.ec2_logs.name}
+    log_stream_name = {instance_id}
+    datetime_format = %b %d %H:%M:%S
+
+    [/var/log/docker.log]
+    file = /var/log/docker.log
+    log_group_name = ${aws_cloudwatch_log_group.ec2_logs.name}
+    log_stream_name = {instance_id}
+    datetime_format = %b %d %H:%M:%S
+    EOT
+
+    # Start the CloudWatch Logs agent
+    sudo systemctl restart awslogsd
 
     # Pull your Docker image (replace this with your actual image)
     docker pull your-docker-image
