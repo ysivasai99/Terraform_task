@@ -109,8 +109,8 @@ resource "aws_instance" "docker_ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type          = "t2.micro"
   key_name               = "personalawskey"  # Replace with your EC2 key pair
-  iam_instance_profile   = aws_iam_instance_profile.ec2_cloudwatch_logs_profile[count.index].name
-  security_groups        = [aws_security_group.ec2_security_group[count.index].name]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_cloudwatch_logs_profile[0].name
+  security_groups        = [aws_security_group.ec2_security_group[0].name]
 
   user_data = <<-EOF
     #!/bin/bash
