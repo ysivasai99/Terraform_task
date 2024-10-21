@@ -29,15 +29,13 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
-# IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_instance_profile_unique" {
-  name = "EC2InstanceProfileUnique2024"  # Unique name
+  name = "EC2InstanceProfileUnique2024"
   role = aws_iam_role.ec2_instance_role.name
 }
 
-# Security Group
 resource "aws_security_group" "ec2_sg_unique" {
-  name        = "AllowSSHHTTPTrafficUnique2024"  # Unique name
+  name        = "AllowSSHHTTPTrafficUnique2024"
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -62,7 +60,6 @@ resource "aws_security_group" "ec2_sg_unique" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
 # EC2 Instance
 resource "aws_instance" "docker_ec2" {
   ami           = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
