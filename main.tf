@@ -58,7 +58,7 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
 # IAM Instance Profile for EC2
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
   name = "EC2InstanceProfileUnique2024"
-  role = aws_iam_instance_profile.ec2_instance_role.name
+  role = aws_iam_role.ec2_instance_role.name  # Corrected line
 }
 
 # Security Group for EC2 instance
