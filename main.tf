@@ -9,7 +9,7 @@ data "aws_vpc" "default" {
 
 # IAM Role for EC2 instance
 resource "aws_iam_role" "ec2_instance_role" {
-  name = "EC2CloudWatchRoleUnique2024"  # Unique name
+  name = "EC2CloudWatchRoleUnique202411"  # Unique name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -29,13 +29,13 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
-resource "aws_iam_instance_profile" "ec2_instance_profile_unique" {
+resource "aws_iam_instance_profile" "ec2_instance_profile_unique1" {
   name = "EC2InstanceProfileUnique2024"
   role = aws_iam_role.ec2_instance_role.name
 }
 
-resource "aws_security_group" "ec2_sg_unique" {
-  name        = "AllowSSHHTTPTrafficUnique2024"
+resource "aws_security_group" "ec2_sg_unique1" {
+  name        = "AllowSSHHTTPTrafficUnique20241"
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -61,13 +61,13 @@ resource "aws_security_group" "ec2_sg_unique" {
   }
 }
 # EC2 Instance
-resource "aws_instance" "docker_ec2" {
+resource "aws_instance" "docker_ec21" {
   ami           = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type = "t2.micro"
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile_unique.name
-  security_groups      = [aws_security_group.ec2_sg_unique.name]
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile_unique1.name
+  security_groups      = [aws_security_group.ec2_sg_unique1.name]
 
   user_data = <<-EOF
     #!/bin/bash
