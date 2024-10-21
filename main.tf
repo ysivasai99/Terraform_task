@@ -9,7 +9,7 @@ data "aws_vpc" "default" {
 
 # IAM Role for EC2 instance to allow logging to CloudWatch
 resource "aws_iam_role" "ec2_cloudwatch_logs_role" {
-  name = "EC2-CloudWatch-Logs-Role"
+  name = "EC2-CloudWatch-Logs-Role-Unique"  # Changed to a unique name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -31,13 +31,13 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_logs_attachment" {
 
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_cloudwatch_logs_profile" {
-  name = "EC2-CloudWatch-Logs-Instance-Profile"
+  name = "EC2-CloudWatch-Logs-Instance-Profile-Unique"  # Changed to a unique name
   role = aws_iam_role.ec2_cloudwatch_logs_role.name
 }
 
 # Security Group for EC2
 resource "aws_security_group" "ec2_security_group" {
-  name        = "SG-EC2-Docker-Logging"
+  name        = "SG-EC2-Docker-Logging-Unique"  # Changed to a unique name
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -119,15 +119,15 @@ resource "aws_instance" "docker_ec2_instance" {
 
     # Install Git
     sudo yum install -y git
-    sudo su
+
     # Clone Git repository (replace the URL with your repository)
-    git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/your-repository
+    git clone https://github.com/your-username/your-repository.git /home/ec2-user/your-repository
 
     # Navigate to the repository directory (if necessary for further commands)
     cd /home/ec2-user/your-repository
 
     # Pull your Docker image (replace with your actual image)
-    docker build -t agri-pass-backend-image .
+    docker pull your-docker-image
 
     # Run Docker container with awslogs log driver for CloudWatch
     docker run -d \
