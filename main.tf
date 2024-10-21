@@ -9,7 +9,7 @@ data "aws_vpc" "default" {
 
 # IAM Role for EC2 instance
 resource "aws_iam_role" "ec2_instance_role" {
-  name = "EC2CloudWatchRoleUnique001"
+  name = "EC2CloudWatchRoleUnique2024"  # Unique name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -30,14 +30,14 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
 }
 
 # IAM Instance Profile
-resource "aws_iam_instance_profile" "ec2_instance_profile_unique001" {
-  name = "EC2InstanceProfileUnique001"
+resource "aws_iam_instance_profile" "ec2_instance_profile_unique" {
+  name = "EC2InstanceProfileUnique2024"  # Unique name
   role = aws_iam_role.ec2_instance_role.name
 }
 
 # Security Group
-resource "aws_security_group" "ec2_sg_unique001" {
-  name        = "AllowSSHHTTPTrafficUnique001"
+resource "aws_security_group" "ec2_sg_unique" {
+  name        = "AllowSSHHTTPTrafficUnique2024"  # Unique name
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -64,13 +64,13 @@ resource "aws_security_group" "ec2_sg_unique001" {
 }
 
 # EC2 Instance
-resource "aws_instance" "docker_ec2_unique001" {
+resource "aws_instance" "docker_ec2" {
   ami           = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type = "t2.micro"
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile_unique001.name
-  security_groups      = [aws_security_group.ec2_sg_unique001.name]
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile_unique.name
+  security_groups      = [aws_security_group.ec2_sg_unique.name]
 
   user_data = <<-EOF
     #!/bin/bash
@@ -78,9 +78,6 @@ resource "aws_instance" "docker_ec2_unique001" {
     sudo amazon-linux-extras install docker -y
     sudo service docker start
     sudo usermod -a -G docker ec2-user
-    
-    # Install Git
-    sudo yum install git -y
 
     # Install CloudWatch Logs agent
     sudo yum install -y awslogs
@@ -118,13 +115,13 @@ resource "aws_instance" "docker_ec2_unique001" {
       --log-driver=awslogs \
       --log-opt awslogs-region=ap-southeast-2 \
       --log-opt awslogs-group=/aws/docker/backend-logs \
-      --log-opt awslogs-stream=backend-container-logs \
       --log-opt awslogs-create-group=true \
       agri-pass-backend-image
+
   EOF
 
   tags = {
-    Name = "DockerInstanceUnique001"
+    Name = "DockerInstanceUnique2024"  # Unique name
   }
 }
 
@@ -136,20 +133,20 @@ resource "aws_cloudwatch_log_group" "docker_log_group" {
 
 # CloudWatch Log Metric Filter
 resource "aws_cloudwatch_log_metric_filter" "error_filter" {
-  name           = "ErrorFilterUnique001"
+  name           = "ErrorFilterUnique2024"
   log_group_name = aws_cloudwatch_log_group.docker_log_group.name
-  pattern        = "{ $.level = \"ERROR\" }"
+  pattern        = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
 
   metric_transformation {
-    name      = "ErrorCountUnique001"
-    namespace = "YourNamespaceUnique001"
+    name      = "ErrorCountUnique2024"
+    namespace = "YourNamespaceUnique2024"
     value     = "1"
   }
 }
 
 # CloudWatch Alarm for Errors
 resource "aws_cloudwatch_metric_alarm" "error_alarm" {
-  alarm_name          = "ErrorCountAlarmUnique001"
+  alarm_name          = "ErrorCountAlarmUnique2024"
   comparison_operator  = "GreaterThanThreshold"
   evaluation_periods   = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].name
