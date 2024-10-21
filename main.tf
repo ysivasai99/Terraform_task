@@ -9,7 +9,7 @@ data "aws_vpc" "default" {
 
 # IAM Role for EC2 instance
 resource "aws_iam_role" "role_ec2_cloudwatch_logging" {
-  name = "EC2RoleCloudWatchLogging"  # Descriptive name
+  name = "EC2RoleCloudWatchLoggingUnique2024"  # Unique name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -31,13 +31,13 @@ resource "aws_iam_role_policy_attachment" "attachment_cloudwatch_policy" {
 
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "profile_ec2_logging" {
-  name = "EC2InstanceProfileCloudWatch"  # Descriptive name
+  name = "EC2InstanceProfileCloudWatchUnique2024"  # Unique name
   role = aws_iam_role.role_ec2_cloudwatch_logging.name
 }
 
 # Security Group
 resource "aws_security_group" "sg_ec2_http_ssh" {
-  name        = "SGAllowSSHHTTP"  # Descriptive name
+  name        = "SGAllowSSHHTTPUnique2024"  # Unique name
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -116,7 +116,7 @@ resource "aws_instance" "instance_docker_backend" {
   EOF
 
   tags = {
-    Name = "DockerBackendInstance"
+    Name = "DockerBackendInstanceUnique2024"
   }
 }
 
@@ -134,7 +134,7 @@ resource "aws_cloudwatch_log_stream" "stream_backend_logs" {
 
 # CloudWatch Log Metric Filter
 resource "aws_cloudwatch_log_metric_filter" "filter_error_logs" {
-  name           = "ErrorLogFilter"
+  name           = "ErrorLogFilterUnique2024"  # Unique name
   log_group_name = aws_cloudwatch_log_group.log_group_backend.name
   pattern        = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
 
@@ -147,7 +147,7 @@ resource "aws_cloudwatch_log_metric_filter" "filter_error_logs" {
 
 # CloudWatch Alarm for Errors
 resource "aws_cloudwatch_metric_alarm" "alarm_error_count" {
-  alarm_name          = "ErrorCountAlarm"
+  alarm_name          = "ErrorCountAlarmUnique2024"  # Unique name
   comparison_operator  = "GreaterThanThreshold"
   evaluation_periods   = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.filter_error_logs.metric_transformation[0].name
