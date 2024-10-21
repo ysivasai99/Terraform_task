@@ -23,9 +23,14 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_logs_attachment" {
 }
 
 resource "aws_iam_instance_profile" "ec2_cloudwatch_logs_profile" {
-  name = "EC2-CloudWatch-Logs-Instance-Profile"
+  name = "EC2-CloudWatch-Logs-Instance-Profile-${random_id.unique_id.hex}"
   role = aws_iam_role.ec2_cloudwatch_logs_role.name
 }
+
+resource "random_id" "unique_id" {
+  byte_length = 4
+}
+
 
 data "aws_vpc" "default" {
   default = true
