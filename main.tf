@@ -35,7 +35,7 @@ resource "aws_iam_instance_profile" "ec2_cloudwatch_logs_profile" {
   role = aws_iam_role.ec2_cloudwatch_logs_role.name
 }
 
-# Security Group
+# Security Group for EC2
 resource "aws_security_group" "ec2_security_group" {
   name        = "SG-EC2-Docker-Logging"
   description = "Allow SSH and HTTP inbound traffic"
@@ -63,44 +63,42 @@ resource "aws_security_group" "ec2_security_group" {
   }
 }
 
-# CloudWatch Log Group for Docker Logs
-resource "aws_cloudwatch_log_group" "docker_logs" {
-  name              = "docker-container-logs"
-  retention_in_days = 7
-}
-
 # CloudWatch Log Group for EC2 Logs
 resource "aws_cloudwatch_log_group" "ec2_logs" {
-  name              = "ec2-instance-logs"
+  name              = "/aws/ec2/instance-logs"
   retention_in_days = 7
 }
 
-# EC2 Instance with Docker
+# CloudWatch Log Group for Docker Logs
+resource "aws_cloudwatch_log_group" "docker_logs" {
+  name              = "/aws/docker/container-logs"
+  retention_in_days = 7
+}
+
+# EC2 Instance with Docker installed, Git installation, and logging configured
 resource "aws_instance" "docker_ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
-  instance_type         = "t2.micro"
-  key_name              = "personalawskey"  # Update with your EC2 Key Pair
+  instance_type          = "t2.micro"
+  key_name               = "personalawskey"  # Replace with your EC2 key pair
   iam_instance_profile   = aws_iam_instance_profile.ec2_cloudwatch_logs_profile.name
   security_groups        = [aws_security_group.ec2_security_group.name]
 
   user_data = <<-EOF
     #!/bin/bash
-    # Install Docker and CloudWatch Logs agent
     sudo yum update -y
-	git clone https://github.com/agri-pass/agri-pass-backend.git
-    cd agri-pass-backend
-    docker build -t agri-pass-backend-image .
-    sudo amazon-linux-extras install -y docker
+
+    # Install Docker
+    sudo amazon-linux-extras install docker -y
     sudo service docker start
     sudo usermod -a -G docker ec2-user
 
-    # Install CloudWatch Logs agent
+    # Install and configure CloudWatch Logs agent
     sudo yum install -y awslogs
     sudo systemctl start awslogsd
     sudo systemctl enable awslogsd.service
 
-    # Configure CloudWatch Logs agent
-    cat <<EOT >> /etc/awslogs/awslogs.conf
+    # Configure CloudWatch Logs for EC2
+    cat <<EOT > /etc/awslogs/awslogs.conf
     [general]
     state_file = /var/lib/awslogs/agent-state
 
@@ -115,35 +113,41 @@ resource "aws_instance" "docker_ec2_instance" {
     log_group_name = ${aws_cloudwatch_log_group.ec2_logs.name}
     log_stream_name = {instance_id}
     datetime_format = %b %d %H:%M:%S
-
-    [/var/log/docker.log]
-    file = /var/log/docker.log
-    log_group_name = ${aws_cloudwatch_log_group.ec2_logs.name}
-    log_stream_name = {instance_id}
-    datetime_format = %b %d %H:%M:%S
     EOT
 
-    # Start the CloudWatch Logs agent
     sudo systemctl restart awslogsd
 
-    # Pull your Docker image (replace this with your actual image)
-    docker pull your-docker-image
+    # Install Git
+    sudo yum install -y git
+    sudo su
+    # Clone Git repository (replace the URL with your repository)
+    git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/your-repository
 
-    # Run the Docker container with CloudWatch logging
+    # Navigate to the repository directory (if necessary for further commands)
+    cd /home/ec2-user/your-repository
+
+    # Pull your Docker image (replace with your actual image)
+    docker build -t agri-pass-backend-image .
+
+    # Run Docker container with awslogs log driver for CloudWatch
     docker run -d \
       --log-driver=awslogs \
       --log-opt awslogs-region=ap-southeast-2 \
-      --log-opt awslogs-group=docker-container-logs \
-      --log-opt awslogs-stream=docker-container-stream \
+      --log-opt awslogs-group=${aws_cloudwatch_log_group.docker_logs.name} \
+      --log-opt awslogs-stream=backend-container-logs \
       your-docker-image
   EOF
 
   tags = {
-    Name = "DockerLoggingEC2Instance"
+    Name = "Docker-EC2-Instance"
   }
 }
 
-# Output the Instance ID
+# Output the instance ID and public IP for reference
 output "instance_id" {
   value = aws_instance.docker_ec2_instance.id
+}
+
+output "instance_public_ip" {
+  value = aws_instance.docker_ec2_instance.public_ip
 }
