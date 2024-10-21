@@ -30,7 +30,7 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
 }
 
 # IAM Instance Profile
-resource "aws_iam_instance_profile" "EC2InstanceProfileUnique5" {
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
   name = "EC2InstanceProfileUnique5"  # Changed name to avoid conflict
   role = aws_iam_role.ec2_instance_role.name
 }
