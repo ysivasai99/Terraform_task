@@ -111,8 +111,12 @@ resource "aws_instance" "docker_ec2" {
     docker build -t agri-pass-backend-image .
 
     # Run the Docker container
-    docker run -d --name backend-container agri-pass-backend-image
-    docker run -it --log-driver=awslogs --log-opt awslogs-region=ap-southeast-2     --log-opt awslogs-group=myLogGroup --log-opt awslogs-create-group=true  node:alpine
+    docker run -d --name backend-container \
+  --log-driver=awslogs \
+  --log-opt awslogs-region=ap-southeast-2 \
+  --log-opt awslogs-group=myLogGroup \
+  --log-opt awslogs-create-group=true \
+  agri-pass-backend-image
 
   EOF
 
