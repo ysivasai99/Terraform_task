@@ -2,8 +2,8 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
-resource "aws_instance" "agri_pass_ec2" {
-  ami           = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI
+resource "aws_instance" "agri_pass_ec2_instance" {
+  ami           = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type = "t2.micro"                # Use appropriate instance type
   key_name      = "personalawskey"          # Use the existing key pair
 
