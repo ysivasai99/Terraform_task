@@ -4,30 +4,30 @@ provider "aws" {
 
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "docker_log_group" {
-  name              = "/aws/docker/backend-logs-unique001"
+  name              = "/aws/docker/backend-logs-unique-2024"
   retention_in_days = 14
 }
 
 # CloudWatch Metric Filter
 resource "aws_cloudwatch_log_metric_filter" "error_filter" {
-  name           = "ErrorFilterUnique001"
+  name           = "ErrorFilterUnique2024"
   log_group_name = aws_cloudwatch_log_group.docker_log_group.name
   pattern        = "ERROR"
 
   metric_transformation {
-    name      = "ErrorCountUnique001"
-    namespace = "YourNamespaceUnique001"
+    name      = "ErrorCountUnique2024"
+    namespace = "YourNamespaceUnique2024"
     value     = "1"
   }
 }
 
 # CloudWatch Metric Alarm
 resource "aws_cloudwatch_metric_alarm" "error_alarm" {
-  alarm_name          = "ErrorCountAlarmUnique001"
+  alarm_name          = "ErrorCountAlarmUnique2024"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
-  metric_name         = "ErrorCountUnique001"
-  namespace           = "YourNamespaceUnique001"
+  metric_name         = "ErrorCountUnique2024"
+  namespace           = "YourNamespaceUnique2024"
   period              = "60"
   statistic           = "Sum"
   threshold           = "5"
@@ -35,7 +35,7 @@ resource "aws_cloudwatch_metric_alarm" "error_alarm" {
 
 # IAM Role for EC2 instance
 resource "aws_iam_role" "ec2_instance_role" {
-  name = "EC2CloudWatchRoleUnique001"
+  name = "EC2CloudWatchRoleUnique2024"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -57,13 +57,13 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
 
 # IAM Instance Profile for EC2
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "EC2InstanceProfileUnique001"
-  role = aws_iam_role.ec2_instance_role.name
+  name = "EC2InstanceProfileUnique2024"
+  role = aws_iam_instance_profile.ec2_instance_role.name
 }
 
 # Security Group for EC2 instance
 resource "aws_security_group" "ec2_sg" {
-  name        = "AllowSSHHTTPTrafficUnique001"
+  name        = "AllowSSHHTTPTrafficUnique2024"
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = "vpc-07e75756a2cacf2a8"  # Update with your VPC ID
 
@@ -98,6 +98,6 @@ resource "aws_instance" "docker_ec2" {
   user_data              = file("${path.module}/user_data.sh")  # Ensure the correct path to your script
 
   tags = {
-    Name = "DockerInstanceUnique001"
+    Name = "DockerInstanceUnique2024"
   }
 }
