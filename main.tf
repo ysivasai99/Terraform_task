@@ -74,9 +74,10 @@ resource "aws_instance" "instance_docker_backend" {
 
   user_data = <<-EOF
     #!/bin/bash
+    # Update and install necessary packages
     sudo yum update -y
-    sudo yum install git -y
-    sudo amazon-linux-extras install docker -y
+    sudo yum install -y git
+    sudo amazon-linux-extras install -y docker
     sudo service docker start
     sudo usermod -a -G docker ec2-user
 
@@ -89,7 +90,7 @@ resource "aws_instance" "instance_docker_backend" {
     aws logs create-log-group --log-group-name /aws/docker/backend-logs --region ap-southeast-2 || true
 
     # Configure Docker logging to CloudWatch
-    cat <<EOT > /etc/docker/daemon.json
+    cat <<EOT | sudo tee /etc/docker/daemon.json
     {
       "log-driver": "awslogs",
       "log-opts": {
@@ -102,7 +103,7 @@ resource "aws_instance" "instance_docker_backend" {
     EOT
 
     # Restart Docker service to apply changes
-    sudo service docker restart
+    sudo systemctl restart docker
 
     # Clone your GitHub repository
     git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend
