@@ -7,8 +7,9 @@ data "aws_vpc" "default" {
   default = true
 }
 
+# IAM Role for EC2 instance
 resource "aws_iam_role" "ec2_instance_role" {
-  name = "EC2CloudWatchRoleUnique2024"
+  name = "EC2CloudWatchRoleNew"  # Changed name to avoid conflict
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -28,13 +29,15 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
-resource "aws_iam_instance_profile" "ec2_instance_profile_unique" {
-  name = "EC2InstanceProfileUnique2024"  # Keep this name consistent
+# IAM Instance Profile
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "EC2InstanceProfileNew"  # Changed name to avoid conflict
   role = aws_iam_role.ec2_instance_role.name
 }
 
-resource "aws_security_group" "ec2_sg_unique1" {
-  name        = "AllowSSHHTTPTrafficUnique20241"
+# Security Group
+resource "aws_security_group" "ec2_sg" {
+  name        = "AllowSSHHTTPTrafficNew"  # Changed name to avoid conflict
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -59,19 +62,19 @@ resource "aws_security_group" "ec2_sg_unique1" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 # EC2 Instance
-resource "aws_instance" "docker_ec21" {
+resource "aws_instance" "docker_ec2" {
   ami           = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type = "t2.micro"
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile_unique1.name
-  security_groups      = [aws_security_group.ec2_sg_unique1.name]
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
+  security_groups      = [aws_security_group.ec2_sg.name]
 
   user_data = <<-EOF
     #!/bin/bash
     sudo yum update -y
-    sudo yum install git -y
     sudo amazon-linux-extras install docker -y
     sudo service docker start
     sudo usermod -a -G docker ec2-user
@@ -84,6 +87,9 @@ resource "aws_instance" "docker_ec21" {
     # Create CloudWatch log group
     aws logs create-log-group --log-group-name /aws/docker/backend-logs --region ap-southeast-2 || true
 
+    # Create CloudWatch log stream
+    aws logs create-log-stream --log-group-name /aws/docker/backend-logs --log-stream-name backend-log-stream --region ap-southeast-2 || true
+
     # Configure Docker logging to CloudWatch
     cat <<EOT > /etc/docker/daemon.json
     {
@@ -91,7 +97,7 @@ resource "aws_instance" "docker_ec21" {
       "log-opts": {
         "awslogs-region": "ap-southeast-2",
         "awslogs-group": "/aws/docker/backend-logs",
-        "awslogs-stream": "backend-container-logs",
+        "awslogs-stream": "backend-log-stream",
         "awslogs-create-group": "true"
       }
     }
@@ -108,17 +114,11 @@ resource "aws_instance" "docker_ec21" {
     docker build -t agri-pass-backend-image .
 
     # Run the Docker container
-    docker run -d --name backend-container \
-      --log-driver=awslogs \
-      --log-opt awslogs-region=ap-southeast-2 \
-      --log-opt awslogs-group=/aws/docker/backend-logs \
-      --log-opt awslogs-create-group=true \
-      agri-pass-backend-image
-
+    docker run -d --name backend-container agri-pass-backend-image
   EOF
 
   tags = {
-    Name = "DockerInstanceUnique2024"  # Unique name
+    Name = "DockerInstanceNew"
   }
 }
 
@@ -128,22 +128,28 @@ resource "aws_cloudwatch_log_group" "docker_log_group" {
   retention_in_days = 7
 }
 
+# CloudWatch Log Stream
+resource "aws_cloudwatch_log_stream" "backend_log_stream" {
+  name           = "backend-log-stream"
+  log_group_name = aws_cloudwatch_log_group.docker_log_group.name
+}
+
 # CloudWatch Log Metric Filter
 resource "aws_cloudwatch_log_metric_filter" "error_filter" {
-  name           = "ErrorFilterUnique2024"
+  name           = "ErrorFilterNew"
   log_group_name = aws_cloudwatch_log_group.docker_log_group.name
   pattern        = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
 
   metric_transformation {
-    name      = "ErrorCountUnique2024"
-    namespace = "YourNamespaceUnique2024"
+    name      = "ErrorCountNew"
+    namespace = "YourNamespaceNew"
     value     = "1"
   }
 }
 
 # CloudWatch Alarm for Errors
 resource "aws_cloudwatch_metric_alarm" "error_alarm" {
-  alarm_name          = "ErrorCountAlarmUnique2024"
+  alarm_name          = "ErrorCountAlarmNew"
   comparison_operator  = "GreaterThanThreshold"
   evaluation_periods   = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].name
