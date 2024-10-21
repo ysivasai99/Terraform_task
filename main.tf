@@ -3,15 +3,15 @@ provider "aws" {
 }
 
 # Create a new key pair for EC2 instance
-resource "aws_key_pair" "agri_pass_key" {
-  key_name   = "agri_pass_key"
+resource "aws_key_pair" "personalawskey" {
+  key_name   = "personalawskey"
   public_key = file("~/.ssh/id_rsa.pub")  # Path to your public SSH key
 }
 
 resource "aws_instance" "agri_pass_ec2" {
   ami           = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI
   instance_type = "t2.micro"                # Use appropriate instance type
-  key_name      = aws_key_pair.agri_pass_key.key_name
+  key_name      = aws_key_pair.personalawskey.key_name
 
   iam_instance_profile = aws_iam_instance_profile.ec2_role.name
 
