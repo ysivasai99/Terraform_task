@@ -18,7 +18,7 @@ data "aws_vpc" "default" {
 
 # IAM Role for EC2 instance to allow logging to CloudWatch
 resource "aws_iam_role" "ec2_cloudwatch_logs_role" {
-  name  = "EC2-CloudWatch-Logs-Role-${local.unique_suffix}"
+  name  = "EC2-CloudWatch-Logs-Role2"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
