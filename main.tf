@@ -7,9 +7,8 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# IAM Role for EC2 instance
 resource "aws_iam_role" "ec2_instance_role" {
-  name = "EC2CloudWatchRoleUnique202411"  # Unique name
+  name = "EC2CloudWatchRoleUnique2024"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -29,8 +28,8 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
-resource "aws_iam_instance_profile" "ec2_instance_profile_unique1" {
-  name = "EC2InstanceProfileUnique2024"
+resource "aws_iam_instance_profile" "ec2_instance_profile_unique" {
+  name = "EC2InstanceProfileUnique2024"  # Keep this name consistent
   role = aws_iam_role.ec2_instance_role.name
 }
 
