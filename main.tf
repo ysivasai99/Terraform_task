@@ -128,7 +128,7 @@ resource "aws_cloudwatch_log_group" "docker_log_group" {
 
 # CloudWatch Log Stream
 resource "aws_cloudwatch_log_stream" "backend_log_stream" {
-  name           = "backend-log-stream"  # Specify the log stream name
+  name           = "backend-log-stream"  # Ensure this name matches the existing log stream
   log_group_name = aws_cloudwatch_log_group.docker_log_group.name
 }
 
