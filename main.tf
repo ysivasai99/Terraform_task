@@ -2,6 +2,15 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
+locals {
+  unique_suffix = format("%s-%s", timestamp(), random_id.unique_suffix.hex)
+}
+
+# Generate a random ID for unique naming
+resource "random_id" "unique_suffix" {
+  byte_length = 4
+}
+
 # Data source to fetch the default VPC
 data "aws_vpc" "default" {
   default = true
@@ -9,7 +18,7 @@ data "aws_vpc" "default" {
 
 # IAM Role for EC2 instance to allow logging to CloudWatch
 resource "aws_iam_role" "ec2_cloudwatch_logs_role" {
-  name  = "EC2-CloudWatch-Logs-Role-Unique"
+  name  = "EC2-CloudWatch-Logs-Role-${local.unique_suffix}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -31,13 +40,13 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_logs_attachment" {
 
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_cloudwatch_logs_profile" {
-  name = "EC2-CloudWatch-Logs-Instance-Profile-Unique"
+  name = "EC2-CloudWatch-Logs-Instance-Profile-${local.unique_suffix}"
   role = aws_iam_role.ec2_cloudwatch_logs_role.name
 }
 
 # Security Group for EC2
 resource "aws_security_group" "ec2_security_group" {
-  name        = "SG-EC2-Docker-Logging-Unique"
+  name        = "SG-EC2-Docker-Logging-${local.unique_suffix}"
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
