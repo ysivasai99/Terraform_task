@@ -7,14 +7,8 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Data source to check if IAM Instance Profile already exists
-data "aws_iam_instance_profile" "existing_instance_profile" {
-  name = "EC2-CloudWatch-Logs-Instance-Profile-Unique"  # Replace with your profile name
-}
-
-# IAM Role for EC2 instance to allow logging to CloudWatch (only create if it doesn't exist)
+# IAM Role for EC2 instance to allow logging to CloudWatch
 resource "aws_iam_role" "ec2_cloudwatch_logs_role" {
-  count = length(data.aws_iam_instance_profile.existing_instance_profile.arn) == 0 ? 1 : 0
   name  = "EC2-CloudWatch-Logs-Role-Unique"
 
   assume_role_policy = jsonencode({
@@ -31,31 +25,18 @@ resource "aws_iam_role" "ec2_cloudwatch_logs_role" {
 
 # Attach CloudWatch Logs Policy to IAM Role
 resource "aws_iam_role_policy_attachment" "cloudwatch_logs_attachment" {
-  count      = length(data.aws_iam_instance_profile.existing_instance_profile.arn) == 0 ? 1 : 0
-  role       = aws_iam_role.ec2_cloudwatch_logs_role[count.index].name
+  role       = aws_iam_role.ec2_cloudwatch_logs_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
-# IAM Instance Profile (only create if it doesn't already exist)
+# IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_cloudwatch_logs_profile" {
-  count = length(data.aws_iam_instance_profile.existing_instance_profile.arn) == 0 ? 1 : 0
-  name  = "EC2-CloudWatch-Logs-Instance-Profile-Unique"
-  role  = aws_iam_role.ec2_cloudwatch_logs_role[count.index].name
+  name = "EC2-CloudWatch-Logs-Instance-Profile-Unique"
+  role = aws_iam_role.ec2_cloudwatch_logs_role.name
 }
 
-# Data source to check if Security Group already exists
-data "aws_security_group" "existing_security_group" {
-  filter {
-    name   = "group-name"
-    values = ["SG-EC2-Docker-Logging-Unique"]
-  }
-
-  vpc_id = data.aws_vpc.default.id
-}
-
-# Security Group for EC2 (only create if it doesn't already exist)
+# Security Group for EC2
 resource "aws_security_group" "ec2_security_group" {
-  count       = length(data.aws_security_group.existing_security_group.id) == 0 ? 1 : 0
   name        = "SG-EC2-Docker-Logging-Unique"
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
@@ -112,15 +93,8 @@ resource "aws_instance" "docker_ec2_instance" {
   instance_type          = "t2.micro"
   key_name               = "personalawskey"  # Replace with your EC2 key pair
 
-  # If the instance profile exists, reference it; otherwise, use the created one
-  iam_instance_profile   = length(data.aws_iam_instance_profile.existing_instance_profile.arn) > 0 ? 
-                           data.aws_iam_instance_profile.existing_instance_profile.arn : 
-                           aws_iam_instance_profile.ec2_cloudwatch_logs_profile[0].name
-
-  # If the security group exists, reference it; otherwise, use the created one
-  security_groups        = length(data.aws_security_group.existing_security_group.id) > 0 ? 
-                           [data.aws_security_group.existing_security_group.name] : 
-                           [aws_security_group.ec2_security_group[0].name]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_cloudwatch_logs_profile.name
+  security_groups        = [aws_security_group.ec2_security_group.name]
 
   user_data = <<-EOF
     #!/bin/bash
