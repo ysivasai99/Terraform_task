@@ -65,7 +65,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 resource "aws_security_group" "ec2_sg" {
   name        = "AllowSSHHTTPTrafficUnique001"
   description = "Allow SSH and HTTP inbound traffic"
-  vpc_id      = "vpc-07e75756a2cacf2a8"
+  vpc_id      = "vpc-07e75756a2cacf2a8"  # Update with your VPC ID
 
   ingress {
     from_port   = 22
@@ -92,10 +92,10 @@ resource "aws_security_group" "ec2_sg" {
 # EC2 instance with IAM role
 resource "aws_instance" "docker_ec2" {
   ami                    = "ami-12345678"  # Replace with your AMI ID
-  instance_type          = "t2.micro"
+  instance_type         = "t2.micro"
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
   security_groups        = [aws_security_group.ec2_sg.name]
-  user_data              = file("path/to/your/user_data.sh")
+  user_data              = file("${path.module}/user_data.sh")  # Ensure the correct path to your script
 
   tags = {
     Name = "DockerInstanceUnique001"
