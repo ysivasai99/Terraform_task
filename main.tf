@@ -36,7 +36,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 }
 
 # Security Group
-resource "aws_security_group" "ec2_sg" {
+resource "aws_security_group" "myec2sg" {
   name        = "AllowSSHHTTPTraffic"  # Changed name to avoid conflict
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
@@ -70,7 +70,7 @@ resource "aws_instance" "docker_ec2" {
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
-  security_groups      = [aws_security_group.ec2_sg.name]
+  security_groups      = [aws_security_group.myec2sg.name]
 
   user_data = <<-EOF
     #!/bin/bash
