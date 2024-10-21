@@ -9,7 +9,7 @@ data "aws_vpc" "default" {
 
 # IAM Role for EC2 instance
 resource "aws_iam_role" "ec2_instance_role" {
-  name = "EC2CloudWatchRoleUnique4"  # Updated name to avoid conflict
+  name = "EC2CloudWatchRoleUnique001"  # Unique role name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -31,13 +31,13 @@ resource "aws_iam_role_policy_attachment" "attach_cw_logs_policy" {
 
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "EC2InstanceProfileUnique4"  # Updated name to avoid conflict
+  name = "EC2InstanceProfileUnique001"  # Unique instance profile name
   role = aws_iam_role.ec2_instance_role.name
 }
 
 # Security Group
-resource "aws_security_group" "ec2_sg2" {  # Keep this name to avoid conflict with the existing state
-  name        = "AllowSSHHTTPTrafficUnique2"  # Updated name to avoid conflict
+resource "aws_security_group" "ec2_sg" {
+  name        = "AllowSSHHTTPTrafficUnique001"  # Unique security group name
   description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = data.aws_vpc.default.id
 
@@ -70,11 +70,17 @@ resource "aws_instance" "docker_ec2" {
   key_name      = "personalawskey"  # Update with your EC2 Key Pair
 
   iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
-  security_groups      = [aws_security_group.ec2_sg2.name]  # Make sure the security group matches
+  security_groups      = [aws_security_group.ec2_sg.name]
 
   user_data = <<-EOF
     #!/bin/bash
+    # Update the instance
     sudo yum update -y
+
+    # Install Git
+    sudo yum install -y git
+
+    # Install Docker
     sudo amazon-linux-extras install docker -y
     sudo service docker start
     sudo usermod -a -G docker ec2-user
@@ -85,68 +91,69 @@ resource "aws_instance" "docker_ec2" {
     sudo systemctl enable awslogsd.service
 
     # Create CloudWatch log group
-    aws logs create-log-group --log-group-name /aws/docker/backend-logs-unique2 --region ap-southeast-2 || true
+    aws logs create-log-group --log-group-name /aws/docker/backend-logs-unique001 --region ap-southeast-2 || true
 
-    # Configure Docker logging to CloudWatch
+    # Configure Docker to send logs to CloudWatch
     cat <<EOT > /etc/docker/daemon.json
     {
       "log-driver": "awslogs",
       "log-opts": {
         "awslogs-region": "ap-southeast-2",
-        "awslogs-group": "/aws/docker/backend-logs-unique2",
-        "awslogs-stream": "backend-container-logs",
+        "awslogs-group": "/aws/docker/backend-logs-unique001",
+        "awslogs-stream": "backend-container-logs-unique001",
         "awslogs-create-group": "true"
       }
     }
     EOT
 
-    # Restart Docker service to apply changes
-    sudo service docker restart
+    # Restart Docker to apply the logging configuration
+    sudo systemctl restart docker
 
-    # Clone your GitHub repository
+    # Clone the GitHub repository
     git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend
 
     cd /home/ec2-user/agri-pass-backend
-    # Build the Docker image
-    docker build -t agri-pass-backend-image .
 
-    # Run the Docker container
-    docker run -d --name backend-container \
+    # Build the Docker image
+    sudo docker build -t agri-pass-backend-image .
+
+    # Run the Docker container with CloudWatch log options
+    sudo docker run -d --name backend-container \
     --log-driver=awslogs \
     --log-opt awslogs-region=ap-southeast-2 \
-    --log-opt awslogs-group=/aws/docker/backend-logs-unique2 \
-    --log-opt awslogs-create-group=true \
+    --log-opt awslogs-group=/aws/docker/backend-logs-unique001 \
+    --log-opt awslogs-stream=backend-container-logs-unique001 \
     agri-pass-backend-image
 
   EOF
 
   tags = {
-    Name = "DockerInstance"
+    Name = "DockerInstanceUnique001"
   }
 }
 
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "docker_log_group" {
-  name              = "/aws/docker/backend-logs-unique2"  # Updated name to avoid conflict
+  name              = "/aws/docker/backend-logs-unique001"
   retention_in_days = 7
 }
 
 # CloudWatch Log Metric Filter
 resource "aws_cloudwatch_log_metric_filter" "error_filter" {
-  name           = "ErrorFilterUnique"
+  name           = "ErrorFilterUnique001"
   log_group_name = aws_cloudwatch_log_group.docker_log_group.name
-  pattern        = "{ $.level = \"ERROR\" }"  # Change this to match your log structure
+  pattern        = "{ $.level = \"ERROR\" }"  # Adjust pattern to match your log structure
 
   metric_transformation {
-    name      = "ErrorCount"
-    namespace = "YourNamespace"
+    name      = "ErrorCountUnique001"
+    namespace = "YourNamespaceUnique001"
     value     = "1"
   }
 }
 
 # CloudWatch Alarm for Errors
 resource "aws_cloudwatch_metric_alarm" "error_alarm" {
-  alarm_name          = "ErrorCountAlarmUnique"  # Updated name to avoid conflict
+  alarm_name          = "ErrorCountAlarmUnique001"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.error_filter.metric_transformation[0].name
