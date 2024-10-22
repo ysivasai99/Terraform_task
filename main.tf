@@ -27,14 +27,14 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 }
 
 # IAM Instance Profile
-resource "aws_iam_instance_profile" "ec2_instance_profile_unique" {
-  name = "ec2_instance_profile_unique"
+resource "aws_iam_instance_profile" "ec2_instance_profile_nnew" {
+  name = "ec2_instance_profile_nnew"
   role = aws_iam_role.ec2_cloudwatch_role.name
 }
 
 # Security Group
 resource "aws_security_group" "ec2_security_group" {
-  name        = "ec2_security_group_unique"
+  name        = "ec2_security_group_nnew"
   description = "Security group for EC2 instance"
   vpc_id      = "vpc-00125d99e226aee56"  # Replace with your VPC ID
 
@@ -54,7 +54,7 @@ resource "aws_security_group" "ec2_security_group" {
   }
 
   tags = {
-    Name = "ec2_security_group_unique"
+    Name = "ec2_security_group_nnew"
   }
 }
 
@@ -63,7 +63,7 @@ resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97"  # Use your AMI ID
   instance_type          = "t2.micro"
   key_name               = "personalawskey"
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_unique.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_nnew.name
   security_groups        = [aws_security_group.ec2_security_group.name]
 
 user_data = <<-EOF
