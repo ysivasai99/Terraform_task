@@ -27,15 +27,6 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 
 
 
-resource "aws_iam_role_policy_attachment" "ecs_ec2_role" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
-  role       = aws_iam_role.ec2_role.name
-}
-
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2-instance-profile"
-  role = aws_iam_role.ec2_role.name
-}
 
 resource "aws_security_group" "ec2_sg99" {
   name        = "ec2_security_group_new"  
