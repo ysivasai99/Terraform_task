@@ -72,7 +72,8 @@ resource "aws_instance" "my_instance" {
   instance_type         = "t2.micro"               # Adjust as necessary
   key_name              = "personalawskey"         # Update with your key pair
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile24.name
-  security_groups       = [aws_security_group.allow_ssh.name]
+  vpc_security_group_ids = [aws_security_group.allow_ssh.id]
+
   subnet_id             = aws_subnet.main.id
 
   user_data = <<-EOF
