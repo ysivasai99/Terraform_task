@@ -37,9 +37,17 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Get the Default Security Group
+# Get the Default Security Group with more specific constraints
 data "aws_security_group" "default" {
-  vpc_id = data.aws_vpc.default.id
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+
+  filter {
+    name   = "group-name"
+    values = ["default"]  # Specify "default" to match the default security group
+  }
 }
 
 # EC2 Instance using the default security group
