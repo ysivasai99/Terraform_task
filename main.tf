@@ -75,16 +75,6 @@ resource "aws_instance" "my_instance" {
   security_groups       = [aws_security_group.allow_ssh.name]
   subnet_id             = aws_subnet.main.id
 
-  tags = {
-    Name = "MyEC2Instance"
-  }
-}
-
-# Output the public IP
-output "instance_ip" {
-  value = aws_instance.my_instance.public_ip
-}
-
   user_data = <<-EOF
   #!/bin/bash
   exec > /var/log/user-data.log 2>&1  # Log all output to this file
