@@ -4,7 +4,7 @@ provider "aws" {
 
 # IAM Role and Policy for EC2 Instance with CloudWatchFullAccess
 resource "aws_iam_role" "ec2_role" {
-  name = "ec2_cloudwatch_role"
+  name = "ec2_cloudwatch_role_new"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -25,14 +25,14 @@ resource "aws_iam_role_policy_attachment" "ec2_cloudwatch_full_access" {
 }
 
 # IAM instance profile to attach the role to the EC2 instance
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile"
+resource "aws_iam_instance_profile" "ec2_instance_profile_new" {
+  name = "ec2_instance_profile_new"
   role = aws_iam_role.ec2_role.name
 }
 
 # Security Group for EC2 Instance
-resource "aws_security_group" "ec2_sg" {
-  name        = "backend_sg"
+resource "aws_security_group" "ec2_sg_new" {
+  name        = "backend_sg_new"
   description = "Allow SSH and HTTP"
 
   ingress {
@@ -62,14 +62,14 @@ resource "aws_instance" "ec2_instance" {
   ami                         = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type               = "t2.micro"
   key_name                    = "personalawskey"
-  iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile_new.name
   associate_public_ip_address = true
 
   tags = {
     Name = "Backend-EC2"
   }
 
-  security_groups = [aws_security_group.ec2_sg.name]
+  security_groups = [aws_security_group.ec2_sg_new.name]
 
   user_data = <<-EOF
     #!/bin/bash
