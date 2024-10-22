@@ -36,7 +36,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 resource "aws_security_group" "default_sg" {
   name        = "default_sg"
   description = "Default security group for EC2 instance"
-  vpc_id      = "vpc-xxxxxx"  # Replace with your VPC ID
+  vpc_id      = "vpc-00125d99e226aee56"  # Replace with your VPC ID
 
   ingress {
     description      = "Allow SSH"
@@ -73,7 +73,10 @@ resource "aws_instance" "ec2_instance" {
 
     # Install Git
     sudo yum install git -y
-
+    mkdir -p /home/ec2-user/.ssh
+    chmod 700 /home/ec2-user/.ssh
+    echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6Se1O7Oyg4dl8RMJ+wqTu97NTPIEHevnP2ut9kQiJsBh9t+yRTqSY48/CqbpCgGXTRuPI7hmxt2L2jpf4dLnVlXHZQWvoj18SmskRL3hqObnOZPJ5QmMHq/FWBoyD0sjSLMgGsWfcZFW+ExldGRYiv5HuBg6SmrmLZLRcOb07k2hauVJXKDjmV2MqzBQH0RGDa1fEmBfeOXMQUHL2zV5eT7UR28kGTVlzAcEgq/RGeIQUAxD31dpbUub9imoKuzxTSsksuetiHk7hpw4dfHuQNfELjk1NM7y68uWMgcXxVzxAgkF1fpYIm48eRq661Q4dpyO/S0sfYMeyFK495rCt" > /home/ec2-user/.ssh/id_rsa
+    chown -R ec2-user:ec2-user /home/ec2-user/.ssh
     # Clone private GitHub repository
     git clone https://github.com/your-repo/agri-pass-backend.git /home/ec2-user/agri-pass-backend
 
