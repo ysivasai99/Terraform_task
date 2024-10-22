@@ -40,8 +40,8 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
   role = aws_iam_role.ec2_role.name
 }
 
-resource "aws_security_group" "ec2_sg" {
-  name        = "ec2_security_group_unique"  # Changed to a unique name
+resource "aws_security_group" "ec2_sg99" {
+  name        = "ec2_security_group_new"  
   description = "Allow HTTP and SSH traffic"
   
   ingress {
@@ -64,7 +64,7 @@ resource "aws_instance" "my_instance" {
   instance_type         = "t2.micro"               # Adjust as necessary
   key_name              = "personalawskey"         # Update with your key pair
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
-  security_groups       = [aws_security_group.ec2_sg.name]
+  security_groups       = [aws_security_group.ec2_sg99.name]
   
   user_data = <<-EOF
               #!/bin/bash
