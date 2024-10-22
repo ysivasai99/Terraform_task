@@ -70,7 +70,11 @@ resource "aws_iam_instance_profile" "ec2_instance_profile24" {
 resource "aws_instance" "my_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Update with your desired AMI
   instance_type         = "t2.micro"               # Adjust as necessary
-  key_name              = "personalawskey"         # Update with your key pair
+  import {
+  to = aws_key_pair.deployer
+  id = "deployer-key"
+ }
+  key_name              = "personalawskey.pem"         # Update with your key pair
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile24.name
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
 
