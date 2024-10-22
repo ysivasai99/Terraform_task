@@ -33,7 +33,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile_nnew" {
 }
 
 # Security Group
-resource "aws_security_group" "ec2_security_group" {
+resource "aws_security_group" "ec2_security_group_nnew" {
   name        = "ec2_security_group_nnew"
   description = "Security group for EC2 instance"
   vpc_id      = "vpc-00125d99e226aee56"  # Replace with your VPC ID
