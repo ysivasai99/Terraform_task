@@ -96,7 +96,6 @@ resource "aws_instance" "ec2_instance" {
     # Build and run Docker container
     sudo docker build -t backend-app .
     sudo docker run -d backend-app
-    sudo docker-compose up -d 
 
     # Install CloudWatch Agent
     sudo yum install -y amazon-cloudwatch-agent
@@ -111,7 +110,7 @@ resource "aws_instance" "ec2_instance" {
               {
                 "file_path": "/var/lib/docker/containers/*/*.log",
                 "log_group_name": "/ecs/backend-docker-logs",
-                "log_stream_name": "{instance_id}",
+                "log_stream_name": "{instance_id}/{container_id}",
                 "timezone": "UTC"
               }
             ]
