@@ -32,12 +32,14 @@ resource "aws_iam_instance_profile" "ec2_instance_profile_nnew" {
   role = aws_iam_role.ec2_cloudwatch_role.name
 }
 
-# Data block to get the default security group
+# Get the Default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Get the Default Security Group
 data "aws_security_group" "default" {
-  filter {
-    name   = "group-name"
-    values = ["default"]
-  }
+  vpc_id = data.aws_vpc.default.id
 }
 
 # EC2 Instance using the default security group
