@@ -11,6 +11,7 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "main" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.1.0/24"
+  enable_dns_hostnames = true
   availability_zone = "ap-southeast-2a"
 }
 
@@ -70,10 +71,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile24" {
 resource "aws_instance" "my_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Update with your desired AMI
   instance_type         = "t2.micro"               # Adjust as necessary
-  import {
-  to = aws_key_pair.deployer
-  id = "deployer-key"
- }
+  
   key_name              = "personalawskey.pem"         # Update with your key pair
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile24.name
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
