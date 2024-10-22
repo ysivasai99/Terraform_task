@@ -57,9 +57,15 @@ resource "aws_security_group" "ec2_sg_new" {
   }
 }
 
+# Create CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "backend_log_group" {
+  name              = "/ecs/backend-docker-logs"
+  retention_in_days = 7  # Set retention for logs
+}
+
 # EC2 Instance Setup
 resource "aws_instance" "ec2_instance" {
-  ami                         = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
+  ami                         = "ami-084e237ffb23f8f97"  # Correct Amazon Linux 2 AMI in ap-southeast-2
   instance_type               = "t2.micro"
   key_name                    = "personalawskey"
   iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile_new.name
@@ -90,6 +96,7 @@ resource "aws_instance" "ec2_instance" {
     # Build and run Docker container
     sudo docker build -t backend-app .
     sudo docker run -d backend-app
+    sudo docker-compose up -d 
 
     # Install CloudWatch Agent
     sudo yum install -y amazon-cloudwatch-agent
@@ -103,23 +110,11 @@ resource "aws_instance" "ec2_instance" {
             "collect_list": [
               {
                 "file_path": "/var/lib/docker/containers/*/*.log",
-                "log_group_name": "backend-docker-logs",
+                "log_group_name": "/ecs/backend-docker-logs",
                 "log_stream_name": "{instance_id}",
                 "timezone": "UTC"
               }
             ]
-          }
-        },
-        "log_stream_name": "backend-docker-log-stream"
-      },
-      "metrics": {
-        "metrics_collected": {
-          "cpu": {
-            "measurement": [
-              {"name": "cpu_usage_idle", "unit": "Percent"},
-              {"name": "cpu_usage_user", "unit": "Percent"}
-            ],
-            "metrics_collection_interval": 60
           }
         }
       }
@@ -139,5 +134,5 @@ output "ec2_instance_public_ip" {
 }
 
 output "cloudwatch_log_group" {
-  value = "backend-docker-logs"
+  value = aws_cloudwatch_log_group.backend_log_group.name
 }
