@@ -65,7 +65,7 @@ resource "aws_cloudwatch_log_group" "backend_log_group" {
 
 # EC2 Instance Setup
 resource "aws_instance" "ec2_instance" {
-  ami                         = "ami-084e237ffb23f8f97"  # Correct Amazon Linux 2 AMI in ap-southeast-2
+  ami                         = "ami-084e237ffb23f8f97"  # Updated AMI
   instance_type               = "t2.micro"
   key_name                    = "personalawskey"
   iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile_new.name
@@ -110,7 +110,7 @@ resource "aws_instance" "ec2_instance" {
               {
                 "file_path": "/var/lib/docker/containers/*/*.log",
                 "log_group_name": "/ecs/backend-docker-logs",
-                "log_stream_name": "{instance_id}/{container_id}",
+                "log_stream_name": "backend-app-log-stream-{container_id}",
                 "timezone": "UTC"
               }
             ]
