@@ -67,13 +67,23 @@ resource "aws_iam_instance_profile" "ec2_instance_profile24" {
   role = aws_iam_role.ec2_role.name
 }
 # EC2 Instance using the default security group
-resource "aws_instance" "ec2_instance" {
-  ami                    = "ami-084e237ffb23f8f97"  # Use your AMI ID
-  instance_type          = "t2.micro"
-  key_name               = "personalawskey"
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile24.name
-  # Use the default security group
-  vpc_security_group_ids = [data.aws_security_group.allow_ssh.id]
+resource "aws_instance" "my_instance" {
+  ami                    = "ami-084e237ffb23f8f97" # Update with your desired AMI
+  instance_type         = "t2.micro"               # Adjust as necessary
+  key_name              = "personalawskey"         # Update with your key pair
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
+  security_groups       = [aws_security_group.allow_ssh.name]
+  subnet_id             = aws_subnet.main.id
+
+  tags = {
+    Name = "MyEC2Instance"
+  }
+}
+
+# Output the public IP
+output "instance_ip" {
+  value = aws_instance.my_instance.public_ip
+}
 
   user_data = <<-EOF
   #!/bin/bash
