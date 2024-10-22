@@ -78,10 +78,7 @@ resource "aws_instance" "my_instance" {
 
   user_data = <<-EOF
   #!/bin/bash
-  exec > /var/log/user-data.log 2>&1  # Log all output to this file
-
   # Update system packages
-  echo "Updating system packages..."
   sudo yum update -y
   sudo yum install git -y
   ls -la ~/.ssh/
