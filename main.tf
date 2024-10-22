@@ -32,14 +32,22 @@ resource "aws_iam_instance_profile" "ec2_instance_profile_nnew" {
   role = aws_iam_role.ec2_cloudwatch_role.name
 }
 
-# EC2 Instance using default security group
+# Data block to get the default security group
+data "aws_security_group" "default" {
+  filter {
+    name   = "group-name"
+    values = ["default"]
+  }
+}
+
+# EC2 Instance using the default security group
 resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97"  # Use your AMI ID
   instance_type          = "t2.micro"
   key_name               = "personalawskey"
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_nnew.name
   # Use the default security group
-  vpc_security_group_ids = [aws_security_group.default.id]
+  vpc_security_group_ids = [data.aws_security_group.default.id]
 
   user_data = <<-EOF
   #!/bin/bash
@@ -121,13 +129,5 @@ resource "aws_instance" "ec2_instance" {
 
   tags = {
     Name = "EC2-with-CloudWatch-Agent"
-  }
-}
-
-# Use the default security group
-data "aws_security_group" "default" {
-  filter {
-    name   = "group-name"
-    values = ["default"]
   }
 }
