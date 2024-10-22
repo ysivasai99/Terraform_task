@@ -27,8 +27,8 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 }
 
 # IAM Instance Profile
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile"
+resource "aws_iam_instance_profile" "ec2_instance_profile55" {
+  name = "ec2_instance_profile55"
   role = aws_iam_role.ec2_cloudwatch_role.name
 }
 
@@ -63,7 +63,7 @@ resource "aws_instance" "ec2_instance" {
   ami           = "ami-084e237ffb23f8f97"  # Use your AMI ID
   instance_type = "t2.micro"
   key_name      = "personalawskey"
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile55.name
   security_groups = [aws_security_group.default_sg.name]
 
   user_data = <<-EOF
