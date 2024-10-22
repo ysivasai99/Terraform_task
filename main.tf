@@ -1,55 +1,71 @@
 provider "aws" {
-  region = "ap-southeast-2"  # Use your AWS region
+  region = "ap-southeast-2"
 }
 
-# IAM Role for CloudWatchFullAccess
-resource "aws_iam_role" "ec2_cloudwatch_role" {
-  name = "ec2_cloudwatch_role_unique"
+# Create a VPC
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+}
+
+# Create a subnet in the VPC
+resource "aws_subnet" "main" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "ap-southeast-2a"
+}
+
+# Create a security group with SSH access
+resource "aws_security_group" "allow_ssh" {
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Adjust to your IP or 0.0.0.0/0 for all (not recommended for production)
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "allow_ssh"
+  }
+}
+
+# Create an IAM role for EC2 with CloudWatch full access
+resource "aws_iam_role" "ec2_role" {
+  name = "ec2-cloudwatch-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Action = "sts:AssumeRole"
-        Effect = "Allow"
         Principal = {
           Service = "ec2.amazonaws.com"
         }
-      }
+        Effect = "Allow"
+        Sid    = ""
+      },
     ]
   })
 }
 
-# Attach CloudWatchFullAccess Policy
 resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
-  role       = aws_iam_role.ec2_cloudwatch_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+  role       = aws_iam_role.ec2_role.name
 }
 
-# IAM Instance Profile
-resource "aws_iam_instance_profile" "ec2_instance_profile_nnewqq" {
-  name = "ec2_instance_profile_nnewqq"
-  role = aws_iam_role.ec2_cloudwatch_role.name
+# Create an IAM instance profile
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "ec2-instance-profile"
+  role = aws_iam_role.ec2_role.name
 }
-
-# Get the Default VPC
-data "aws_vpc" "default" {
-  default = true
-}
-
-# Get the Default Security Group with more specific constraints
-data "aws_security_group" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-
-  filter {
-    name   = "group-name"
-    values = ["default"]  # Specify "default" to match the default security group
-  }
-}
-
 # EC2 Instance using the default security group
 resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97"  # Use your AMI ID
