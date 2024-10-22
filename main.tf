@@ -21,7 +21,7 @@ resource "aws_iam_role" "ec2_role" {
 }
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2-instance-profile"
+  name = "ec2-instance-profile-unique"  # Changed to a unique name
   role = aws_iam_role.ec2_role.name
 }
 
@@ -36,10 +36,9 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_logs_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_managed_instance_core" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonSSMManagedInstanceCore" # Ensure this is correct
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonSSMManagedInstanceCore" # Verify this ARN
   role       = aws_iam_role.ec2_role.name
 }
-
 
 resource "aws_iam_role_policy_attachment" "ecs_ec2_role" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
@@ -47,7 +46,7 @@ resource "aws_iam_role_policy_attachment" "ecs_ec2_role" {
 }
 
 resource "aws_security_group" "ec2_sg22" {
-  name        = "ec2_security_group46"
+  name        = "ec2_security_group_unique"  # Changed to a unique name
   description = "Allow HTTP and SSH traffic"
   
   ingress {
@@ -69,7 +68,7 @@ resource "aws_instance" "my_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Update with your desired AMI
   instance_type         = "t2.micro"               # Adjust as necessary
   key_name              = "personalawskey"         # Update with your key pair
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name # Corrected reference
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
   security_groups       = [aws_security_group.ec2_sg22.name]
   
   user_data = <<-EOF
@@ -80,8 +79,6 @@ resource "aws_instance" "my_instance" {
               systemctl start docker
               systemctl enable docker
               usermod -aG docker ec2-user
-              # Display the public key
-              cat ~/.ssh/id_rsa.pub
               # Clone your repository
               git clone https://github.com/your-repo/agri-pass-backend.git
               cd agri-pass-backend
