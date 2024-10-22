@@ -66,36 +66,52 @@ resource "aws_instance" "ec2_instance" {
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_unique.name
   security_groups        = [aws_security_group.ec2_security_group.name]
 
-  user_data = <<-EOF
-    #!/bin/bash
-    # Update system packages
-    sudo yum update -y
+user_data = <<-EOF
+#!/bin/bash
+exec > /var/log/user-data.log 2>&1  # Log all output to this file
 
-    # Install Git
-    sudo yum install git -y
-    mkdir -p /home/ec2-user/.ssh
-    chmod 700 /home/ec2-user/.ssh
-    echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6Se1O7Oyg4dl8RMJ+wqTu97NTPIEHevnP2ut9kQiJsBh9t+yRTqSY48/CqbpCgGXTRuPI7hmxt2L2jpf4dLnVlXHZQWvoj18SmskRL3hqObnOZPJ5QmMHq/FWBoyD0sjSLMgGsWfcZFW+ExldGRYiv5HuBg6SmrmLZLRcOb07k2hauVJXKDjmV2MqzBQH0RGDa1fEmBfeOXMQUHL2zV5eT7UR28kGTVlzAcEgq/RGeIQUAxD31dpbUub9imoKuzxTSsksuetiHk7hpw4dfHuQNfELjk1NM7y68uWMgcXxVzxAgkF1fpYIm48eRq661Q4dpyO/S0sfYMeyFK495rCt" > /home/ec2-user/.ssh/id_rsa
-    chown -R ec2-user:ec2-user /home/ec2-user/.ssh
+# Update system packages
+echo "Updating system packages..."
+sudo yum update -y
 
-    # Clone private GitHub repository
-    git clone https://github.com/your-repo/agri-pass-backend.git /home/ec2-user/agri-pass-backend
+# Install Git
+echo "Installing Git..."
+sudo yum install git -y
 
-    # Install Docker
-    sudo amazon-linux-extras install docker -y
-    sudo service docker start
-    sudo systemctl enable docker
-    sudo usermod -a -G docker ec2-user
+# Set up SSH for GitHub access
+ssh-keygen -t rsa -b 2048
 
-    # Build Docker image
-    cd /home/ec2-user/agri-pass-backend
-    sudo docker build -t agri-pass-backend .
+echo "PRIVATE_SSH_KEY_CONTENT" > /home/ec2-user/.ssh/id_rsa
+chmod 600 /home/ec2-user/.ssh/id_rsa
+chown -R ec2-user:ec2-user /home/ec2-user/.ssh
 
-    # Run Docker container
-    sudo docker run -d --name agri-pass-backend-container agri-pass-backend
+# Add GitHub to known hosts to avoid prompt
+echo "Adding GitHub to known hosts..."
+ssh-keyscan github.com >> /home/ec2-user/.ssh/known_hosts
 
-    # Install CloudWatch Agent
-    sudo yum install -y amazon-cloudwatch-agent
+# Clone private GitHub repository
+echo "Cloning repository..."
+git clone git@github.com:your-repo/agri-pass-backend.git /home/ec2-user/agri-pass-backend
+
+# Install Docker
+echo "Installing Docker..."
+sudo amazon-linux-extras install docker -y
+sudo service docker start
+sudo systemctl enable docker
+sudo usermod -a -G docker ec2-user
+
+# Build Docker image
+echo "Building Docker image..."
+cd /home/ec2-user/agri-pass-backend
+sudo docker build -t agri-pass-backend .
+
+# Run Docker container
+echo "Running Docker container..."
+sudo docker run -d --name agri-pass-backend-container agri-pass-backend
+
+# Install CloudWatch Agent
+echo "Installing CloudWatch Agent..."
+sudo yum install -y amazon-cloudwatch-agent
 
     # Create CloudWatch config file
     cat <<EOT >> /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
