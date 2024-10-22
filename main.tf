@@ -63,7 +63,7 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 
 # Create an IAM instance profile
 resource "aws_iam_instance_profile" "ec2_instance_profile24" {
-  name = "ec2-instance-profile"
+  name = "ec2-instance-profile24"
   role = aws_iam_role.ec2_role.name
 }
 # EC2 Instance using the default security group
