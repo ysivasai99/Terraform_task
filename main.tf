@@ -1,15 +1,16 @@
 provider "aws" {
-  region = "ap-southeast-2"
+  region = "ap-southeast-2"  # Replace with your AWS region
 }
 
-# IAM Role for EC2
+# Create an IAM Role and Policy for EC2 to access CloudWatch Logs
 resource "aws_iam_role" "ec2_role" {
-  name = "ec2_cloudwatch_role"
+  name = "ec2-cloudwatch-role"
+
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
+      Action    = "sts:AssumeRole",
+      Effect    = "Allow",
       Principal = {
         Service = "ec2.amazonaws.com"
       }
@@ -17,44 +18,37 @@ resource "aws_iam_role" "ec2_role" {
   })
 }
 
-# Attach policies to the IAM role
-resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
+# Attach CloudWatch Logs full access policy
+resource "aws_iam_role_policy_attachment" "cloudwatch_logs_policy" {
   role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
-resource "aws_iam_role_policy_attachment" "ssm_managed" {
-  role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_ec2_role" {
-  role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
-}
-
-# IAM Instance Profile
+# Create an Instance Profile for the EC2 instance to assume the IAM role
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile"
+  name = "ec2-instance-profile"
   role = aws_iam_role.ec2_role.name
 }
 
-# Security Group
-resource "aws_security_group" "ec2_sg" {
-  name        = "backend_sg"
+# Security group for the EC2 instance
+resource "aws_security_group" "instance_sg" {
+  name        = "allow_ssh_http"
   description = "Allow SSH and HTTP"
+  
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"]  # Update with your specific IP if needed
   }
+
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -63,43 +57,27 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
-# EC2 Instance
-resource "aws_instance" "ec2_instance" {
-  ami                         = "ami-084e237ffb23f8f97
-  instance_type               = "t2.micro"
-  key_name                    = "personalawskey"
+# Launch an EC2 instance with the IAM role and security group
+resource "aws_instance" "docker_instance" {
+  ami                         = "ami-084e237ffb23f8f97"  # Use your specific AMI ID
+  instance_type               = "t2.micro"  # Modify instance type if needed
+  key_name                    = "personalawskey"  # Replace with your key pair name
   iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile.name
-  associate_public_ip_address = true
-  security_groups             = [aws_security_group.ec2_sg.name]
+  security_groups             = [aws_security_group.instance_sg.name]
 
-  tags = {
-    Name = "Docker-EC2"
-  }
-
+  # User Data Script to install Docker and configure CloudWatch logs
   user_data = <<-EOF
     #!/bin/bash
-    # Install Docker, Git, and update the system
-    sudo yum update -y
-    sudo yum install git -y
-    sudo amazon-linux-extras install docker -y
-    sudo systemctl start docker
-    sudo systemctl enable docker
-    sudo usermod -aG docker ec2-user
+    yum update -y
+    amazon-linux-extras install docker -y
+    service docker start
+    usermod -aG docker ec2-user
+    
+    # Install the CloudWatch Logs agent
+    yum install -y amazon-cloudwatch-agent
 
-    # Clone the repository
-    cd /home/ec2-user
-    git clone https://github.com/agri-pass/agri-pass-backend.git
-    cd agri-pass-backend
-    sudo docker build -t agri-pass-backend-image .
-
-    # Run Docker container with port 80 exposed
-    sudo docker run -d --name my-app-container -p 80:80 agri-pass-backend-image
-
-    # Install CloudWatch Agent
-    sudo yum install amazon-cloudwatch-agent -y
-
-    # Create CloudWatch Agent configuration file
-    sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<-CONFIG
+    # Create CloudWatch Agent config file for Docker logs
+    cat <<EOT >> /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
     {
       "logs": {
         "logs_collected": {
@@ -108,29 +86,35 @@ resource "aws_instance" "ec2_instance" {
               {
                 "file_path": "/var/lib/docker/containers/*/*.log",
                 "log_group_name": "docker-logs",
-                "log_stream_name": "{instance_id}"
+                "log_stream_name": "my-app-container-logs"
               }
             ]
           }
         }
       }
     }
-    CONFIG
+    EOT
 
-    # Start the CloudWatch Agent
-    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+    # Start CloudWatch Agent
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+      -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+      -s
 
-    # Run the Docker container with CloudWatch log driver
-    sudo docker run -d --name my-app-containernew \
+    # Pull and run Docker container with CloudWatch logs configuration
+    docker run -d --name my-app-container \
       --log-driver awslogs \
       --log-opt awslogs-region=ap-southeast-2 \
       --log-opt awslogs-group=docker-logs \
       --log-opt awslogs-create-group=true \
       -p 80:80 agri-pass-backend-image
   EOF
+
+  tags = {
+    Name = "DockerInstance"
+  }
 }
 
-# Output EC2 Instance Public IP
-output "ec2_instance_public_ip" {
-  value = aws_instance.ec2_instance.public_ip
+# Output the public IP of the EC2 instance
+output "instance_public_ip" {
+  value = aws_instance.docker_instance.public_ip
 }
