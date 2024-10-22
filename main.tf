@@ -4,7 +4,7 @@ provider "aws" {
 
 # IAM Role for CloudWatchFullAccess
 resource "aws_iam_role" "ec2_cloudwatch_role" {
-  name = "ec2_cloudwatch_role"
+  name = "ec2_cloudwatch_role_unique"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -27,15 +27,15 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 }
 
 # IAM Instance Profile
-resource "aws_iam_instance_profile" "ec2_instance_profile55" {
-  name = "ec2_instance_profile55"
+resource "aws_iam_instance_profile" "ec2_instance_profile_unique" {
+  name = "ec2_instance_profile_unique"
   role = aws_iam_role.ec2_cloudwatch_role.name
 }
 
 # Security Group
-resource "aws_security_group" "default_sg" {
-  name        = "default_sg"
-  description = "Default security group for EC2 instance"
+resource "aws_security_group" "ec2_security_group" {
+  name        = "ec2_security_group_unique"
+  description = "Security group for EC2 instance"
   vpc_id      = "vpc-00125d99e226aee56"  # Replace with your VPC ID
 
   ingress {
@@ -54,17 +54,17 @@ resource "aws_security_group" "default_sg" {
   }
 
   tags = {
-    Name = "default_sg"
+    Name = "ec2_security_group_unique"
   }
 }
 
 # EC2 Instance
 resource "aws_instance" "ec2_instance" {
-  ami           = "ami-084e237ffb23f8f97"  # Use your AMI ID
-  instance_type = "t2.micro"
-  key_name      = "personalawskey"
-  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile55.name
-  security_groups = [aws_security_group.default_sg.name]
+  ami                    = "ami-084e237ffb23f8f97"  # Use your AMI ID
+  instance_type          = "t2.micro"
+  key_name               = "personalawskey"
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_unique.name
+  security_groups        = [aws_security_group.ec2_security_group.name]
 
   user_data = <<-EOF
     #!/bin/bash
@@ -77,6 +77,7 @@ resource "aws_instance" "ec2_instance" {
     chmod 700 /home/ec2-user/.ssh
     echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6Se1O7Oyg4dl8RMJ+wqTu97NTPIEHevnP2ut9kQiJsBh9t+yRTqSY48/CqbpCgGXTRuPI7hmxt2L2jpf4dLnVlXHZQWvoj18SmskRL3hqObnOZPJ5QmMHq/FWBoyD0sjSLMgGsWfcZFW+ExldGRYiv5HuBg6SmrmLZLRcOb07k2hauVJXKDjmV2MqzBQH0RGDa1fEmBfeOXMQUHL2zV5eT7UR28kGTVlzAcEgq/RGeIQUAxD31dpbUub9imoKuzxTSsksuetiHk7hpw4dfHuQNfELjk1NM7y68uWMgcXxVzxAgkF1fpYIm48eRq661Q4dpyO/S0sfYMeyFK495rCt" > /home/ec2-user/.ssh/id_rsa
     chown -R ec2-user:ec2-user /home/ec2-user/.ssh
+
     # Clone private GitHub repository
     git clone https://github.com/your-repo/agri-pass-backend.git /home/ec2-user/agri-pass-backend
 
