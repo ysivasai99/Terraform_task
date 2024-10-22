@@ -35,8 +35,8 @@ resource "aws_iam_role_policy_attachment" "ecs_ec2_role" {
   role       = aws_iam_role.ec2_role.name
 }
 
-resource "aws_security_group" "ec2_sg" {
-  name        = "ec2_security_group"
+resource "aws_security_group" "ec2_sg22" {
+  name        = "ec2_security_group46"
   description = "Allow HTTP and SSH traffic"
   
   ingress {
