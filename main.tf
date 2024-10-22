@@ -59,7 +59,7 @@ resource "aws_security_group" "ec2_sg_new" {
 
 # EC2 Instance Setup
 resource "aws_instance" "ec2_instance" {
-  ami                         = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
+  ami                         = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI
   instance_type               = "t2.micro"
   key_name                    = "personalawskey"
   iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile_new.name
@@ -94,7 +94,7 @@ resource "aws_instance" "ec2_instance" {
     # Install CloudWatch Agent
     sudo yum install -y amazon-cloudwatch-agent
 
-    # CloudWatch Logs configuration
+    # Create CloudWatch Logs configuration file
     cat <<EOT >> /opt/aws/amazon-cloudwatch-agent/bin/config.json
     {
       "logs": {
@@ -109,6 +109,18 @@ resource "aws_instance" "ec2_instance" {
               }
             ]
           }
+        },
+        "log_stream_name": "backend-docker-log-stream"
+      },
+      "metrics": {
+        "metrics_collected": {
+          "cpu": {
+            "measurement": [
+              {"name": "cpu_usage_idle", "unit": "Percent"},
+              {"name": "cpu_usage_user", "unit": "Percent"}
+            ],
+            "metrics_collection_interval": 60
+          }
         }
       }
     }
@@ -116,6 +128,8 @@ resource "aws_instance" "ec2_instance" {
 
     # Start CloudWatch Agent
     sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
+    sudo systemctl enable amazon-cloudwatch-agent
+    sudo systemctl start amazon-cloudwatch-agent
   EOF
 }
 
