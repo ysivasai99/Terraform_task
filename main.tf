@@ -2,10 +2,9 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
-# IAM Role and Policy for EC2 Instance with CloudWatchFullAccess
+# IAM Role for EC2
 resource "aws_iam_role" "ec2_role" {
-  name = "ec2_cloudwatch_role_new"
-
+  name = "ec2_cloudwatch_role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -18,37 +17,44 @@ resource "aws_iam_role" "ec2_role" {
   })
 }
 
-# Attach the AWS-managed CloudWatchFullAccess policy to the EC2 role
-resource "aws_iam_role_policy_attachment" "ec2_cloudwatch_full_access" {
+# Attach policies to the IAM role
+resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
 }
 
-# IAM instance profile to attach the role to the EC2 instance
-resource "aws_iam_instance_profile" "ec2_instance_profile_new" {
-  name = "ec2_instance_profile_new"
+resource "aws_iam_role_policy_attachment" "ssm_managed" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_ec2_role" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+}
+
+# IAM Instance Profile
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "ec2_instance_profile"
   role = aws_iam_role.ec2_role.name
 }
 
-# Security Group for EC2 Instance
-resource "aws_security_group" "ec2_sg_new" {
-  name        = "backend_sg_new"
+# Security Group
+resource "aws_security_group" "ec2_sg" {
+  name        = "backend_sg"
   description = "Allow SSH and HTTP"
-
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # SSH access (you can restrict this)
+    cidr_blocks = ["0.0.0.0/0"]
   }
-
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # HTTP access
+    cidr_blocks = ["0.0.0.0/0"]
   }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -57,51 +63,43 @@ resource "aws_security_group" "ec2_sg_new" {
   }
 }
 
-# Create CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "backend_log_group" {
-  name              = "/ecs/backend-docker-logs"
-  retention_in_days = 7  # Set retention for logs
-}
-
-# EC2 Instance Setup
+# EC2 Instance
 resource "aws_instance" "ec2_instance" {
-  ami                         = "ami-084e237ffb23f8f97"  # Updated AMI
+  ami                         = "ami-084e237ffb23f8f97"
   instance_type               = "t2.micro"
   key_name                    = "personalawskey"
-  iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile_new.name
+  iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile.name
   associate_public_ip_address = true
+  security_groups             = [aws_security_group.ec2_sg.name]
 
   tags = {
-    Name = "Backend-EC2"
+    Name = "Docker-EC2"
   }
-
-  security_groups = [aws_security_group.ec2_sg_new.name]
 
   user_data = <<-EOF
     #!/bin/bash
-    # Update system and install Git
+    # Install Docker, Git, and update the system
     sudo yum update -y
     sudo yum install git -y
-
-    # Install Docker
     sudo amazon-linux-extras install docker -y
-    sudo service docker start
-    sudo usermod -a -G docker ec2-user
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    sudo usermod -aG docker ec2-user
 
-    # Clone the backend repository from GitHub
+    # Clone the repository
     cd /home/ec2-user
     git clone https://github.com/agri-pass/agri-pass-backend.git
     cd agri-pass-backend
+    sudo docker build -t agri-pass-backend-image .
 
-    # Build and run Docker container
-    sudo docker build -t backend-app .
-    sudo docker run -d backend-app
+    # Run Docker container with port 80 exposed
+    sudo docker run -d --name my-app-container -p 80:80 agri-pass-backend-image
 
     # Install CloudWatch Agent
-    sudo yum install -y amazon-cloudwatch-agent
+    sudo yum install amazon-cloudwatch-agent -y
 
-    # Create CloudWatch Logs configuration file
-    cat <<EOT >> /opt/aws/amazon-cloudwatch-agent/bin/config.json
+    # Create CloudWatch Agent configuration file
+    sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<-CONFIG
     {
       "logs": {
         "logs_collected": {
@@ -109,29 +107,30 @@ resource "aws_instance" "ec2_instance" {
             "collect_list": [
               {
                 "file_path": "/var/lib/docker/containers/*/*.log",
-                "log_group_name": "/ecs/backend-docker-logs",
-                "log_stream_name": "backend-app-log-stream-{container_id}",
-                "timezone": "UTC"
+                "log_group_name": "docker-logs",
+                "log_stream_name": "{instance_id}"
               }
             ]
           }
         }
       }
     }
-    EOT
+    CONFIG
 
-    # Start CloudWatch Agent
-    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
-    sudo systemctl enable amazon-cloudwatch-agent
-    sudo systemctl start amazon-cloudwatch-agent
+    # Start the CloudWatch Agent
+    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+
+    # Run the Docker container with CloudWatch log driver
+    sudo docker run -d --name my-app-containernew \
+      --log-driver awslogs \
+      --log-opt awslogs-region=ap-southeast-2 \
+      --log-opt awslogs-group=docker-logs \
+      --log-opt awslogs-create-group=true \
+      -p 80:80 agri-pass-backend-image
   EOF
 }
 
-# Outputs
+# Output EC2 Instance Public IP
 output "ec2_instance_public_ip" {
   value = aws_instance.ec2_instance.public_ip
-}
-
-output "cloudwatch_log_group" {
-  value = aws_cloudwatch_log_group.backend_log_group.name
 }
