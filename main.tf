@@ -75,6 +75,15 @@ resource "aws_instance" "my_instance" {
               systemctl enable docker
               usermod -aG docker ec2-user
               # Clone your repository
+              ssh-keygen -t rsa -b 4096 -C "ysivasai99@gmail.com"
+              cat ~/.ssh/id_rsa.pub
+              clip < ~/.ssh/id_rsa.pub
+              
+
+              mkdir -p ~/.ssh
+              echo "YOUR_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+              chmod 600 ~/.ssh/id_rsa
+              ssh-keyscan github.com >> ~/.ssh/known_hosts
               git clone https://github.com/your-repo/agri-pass-backend.git
               sleep 30
               cd agri-pass-backend
