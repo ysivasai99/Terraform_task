@@ -2,58 +2,60 @@ provider "aws" {
   region = "ap-southeast-2"
 }
 
-resource "aws_iam_role" "ec2_role" {
-  name = "ec2-cloudwatch-role"
+resource "aws_iam_role" "ec2_cloudwatch_role" {
+  name = "ec2_cloudwatch_role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Action = "sts:AssumeRole"
+        Effect = "Allow"
         Principal = {
           Service = "ec2.amazonaws.com"
         }
-        Effect = "Allow"
-        Sid    = ""
-      },
+      }
     ]
   })
 }
 
 resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
+  role       = aws_iam_role.ec2_cloudwatch_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
-  role       = aws_iam_role.ec2_role.name
+}
+resource "aws_iam_role" "ec2_cloudwatch_role" {
+  name = "ec2_cloudwatch_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
+  role       = aws_iam_role.ec2_cloudwatch_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
 }
 
 
-
-
-resource "aws_security_group" "ec2_sg99" {
-  name        = "ec2_security_group_new"  
-  description = "Allow HTTP and SSH traffic"
-  
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+resource "aws_instance" "ec2_instance" {
+  ami           = "ami-084e237ffb23f8f97" # Use your AMI ID
+  instance_type = "t2.micro"
+  key_name      = "personalawskey"
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
+  security_groups = [aws_security_group.default_sg.name]
+  tags = {
+    Name = "EC2-with-Security-Group"
   }
 }
-
-resource "aws_instance" "my_instance" {
-  ami                    = "ami-084e237ffb23f8f97" # Update with your desired AMI
-  instance_type         = "t2.micro"               # Adjust as necessary
-  key_name              = "personalawskey"         # Update with your key pair
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
-  security_groups       = [aws_security_group.ec2_sg99.name]
-  
   user_data = <<-EOF
               #!/bin/bash
               yum update -y
