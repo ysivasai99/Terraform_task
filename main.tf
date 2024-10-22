@@ -73,13 +73,14 @@ exec > /var/log/user-data.log 2>&1  # Log all output to this file
 # Update system packages
 echo "Updating system packages..."
 sudo yum update -y
-
-# Install Git
-echo "Installing Git..."
 sudo yum install git -y
+ls -la ~/.ssh/
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+ssh-keygen -t rsa -b 2048 -C "ysivasai99@gmail.com"
+ls -la ~/.ssh/
+cat ~/.ssh/id_rsa.pub
 
-# Set up SSH for GitHub access
-ssh-keygen -t rsa -b 2048
 
 echo "PRIVATE_SSH_KEY_CONTENT" > /home/ec2-user/.ssh/id_rsa
 chmod 600 /home/ec2-user/.ssh/id_rsa
