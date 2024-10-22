@@ -59,7 +59,7 @@ resource "aws_instance" "my_instance" {
   instance_type         = "t2.micro"               # Adjust as necessary
   key_name              = "personalawskey"         # Update with your key pair
   iam_instance_profile   = aws_iam_role.ec2_role.name
-  security_groups       = [aws_security_group.ec2_sg.name]
+  security_groups       = [aws_security_group.ec2_sg22.name]
   
   user_data = <<-EOF
               #!/bin/bash
