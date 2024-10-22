@@ -59,7 +59,7 @@ resource "aws_security_group" "ec2_sg_new" {
 
 # EC2 Instance Setup
 resource "aws_instance" "ec2_instance" {
-  ami                         = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI
+  ami                         = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type               = "t2.micro"
   key_name                    = "personalawskey"
   iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile_new.name
