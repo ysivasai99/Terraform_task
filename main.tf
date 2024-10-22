@@ -71,7 +71,7 @@ resource "aws_instance" "my_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Update with your desired AMI
   instance_type         = "t2.micro"               # Adjust as necessary
   key_name              = "personalawskey"         # Update with your key pair
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile24.name
   security_groups       = [aws_security_group.allow_ssh.name]
   subnet_id             = aws_subnet.main.id
 
