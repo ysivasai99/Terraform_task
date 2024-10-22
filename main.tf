@@ -64,7 +64,7 @@ resource "aws_instance" "ec2_instance" {
   instance_type          = "t2.micro"
   key_name               = "personalawskey"
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_nnew.name
-  security_groups        = [aws_security_group.ec2_security_group.name]
+  security_groups        = [aws_security_group.ec2_security_group_nnew.name]
 
 user_data = <<-EOF
 #!/bin/bash
