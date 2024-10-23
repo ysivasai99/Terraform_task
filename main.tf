@@ -85,18 +85,19 @@ resource "aws_instance" "ec2_instance" {
   provisioner "remote-exec" {
     inline = [
       "sudo yum update -y",
-      "sudo yum install docker git -y",
+      "sudo yum install docker git amazon-cloudwatch-agent -y", # Grouped the installs for clarity
       "sudo systemctl start docker",
       "sudo systemctl enable docker",
-      "sudo yum install -y amazon-cloudwatch-agent", # Corrected to install CloudWatch Agent directly
       "sudo mkdir -p /var/log/docker_logs",
       "ssh-keyscan github.com >> ~/.ssh/known_hosts",
-      # Clone the repository via HTTPS (since no SSH key)
-      "git clone git@github.com:agri-pass/agri-pass-backend.git",
+      
+      # Clone the repository via HTTPS
+      "git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend",
       "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
-      "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream={instance_id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
-      # Create CloudWatch Agent configuration file using a heredoc
+      "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
+
+      # Create CloudWatch Agent configuration file
       <<-EOF
       sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
       {
@@ -107,7 +108,7 @@ resource "aws_instance" "ec2_instance" {
                 {
                   "file_path": "/var/lib/docker/containers/*.log",
                   "log_group_name": "docker-logs",
-                  "log_stream_name": "{instance_id}"
+                  "log_stream_name": "${aws_instance.ec2_instance.id}" # Corrected the instance ID interpolation
                 }
               ]
             }
