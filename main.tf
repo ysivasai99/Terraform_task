@@ -93,7 +93,7 @@ resource "aws_instance" "ec2_instance" {
       "sudo mkdir -p /var/log/docker_logs",
 
       # Clone the repository via HTTPS (since no SSH key)
-      "git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend",
+      "git clone git@github.com:agri-pass/agri-pass-backend.git",
       "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream={instance_id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
