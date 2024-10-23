@@ -2,10 +2,16 @@ provider "aws" {
   region = "ap-southeast-2" # Specify your preferred AWS region
 }
 
-# Key pair resource for SSH access to EC2
+# Generate new SSH key pair using Terraform
+resource "tls_private_key" "ec2_key" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+# AWS key pair resource, using the public key from the generated key
 resource "aws_key_pair" "ec2_key" {
-  key_name   = "sivasaiaws" # Change to your key name
-  public_key = file("C:\\Users\\ysiva\\.ssh\\id_rsa.pub") # Path to your public key
+  key_name   = "sivasaiaws" # Name of the key
+  public_key = tls_private_key.ec2_key.public_key_openssh
 }
 
 # Security group allowing SSH and HTTP access
@@ -39,7 +45,7 @@ resource "aws_security_group" "allow_ssh_http" {
 resource "aws_instance" "ec2_instance" {
   ami           = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
   instance_type = "t2.micro"
-  key_name      = aws_key_pair.ec2_key.key_name  # Fix the key_name reference
+  key_name      = aws_key_pair.ec2_key.key_name  # Use the generated key pair
 
   vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
 
@@ -91,7 +97,7 @@ resource "aws_instance" "ec2_instance" {
     connection {
       type        = "ssh"
       user        = "ec2-user"
-      private_key = file("C:\\Users\\ysiva\\.ssh\\id_rsa") # Use correct private key path
+      private_key = tls_private_key.ec2_key.private_key_pem # Use the generated private key for SSH
       host        = self.public_ip
     }
   }
@@ -111,4 +117,10 @@ resource "aws_cloudwatch_log_stream" "log_stream" {
 
 output "ec2_instance_public_ip" {
   value = aws_instance.ec2_instance.public_ip
+}
+
+# Output the private key
+output "private_key" {
+  value     = tls_private_key.ec2_key.private_key_pem
+  sensitive = true # Ensures the private key doesn't show in plaintext
 }
