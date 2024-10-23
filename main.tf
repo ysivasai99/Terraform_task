@@ -74,7 +74,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile123" {
 resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
   instance_type          = "t2.micro"
-  key_name               = aws_key_pair.generated_key.sivasaiaws
+  key_name               = "sivasaiaws"
   vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile123.name
 
