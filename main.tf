@@ -1,28 +1,30 @@
 provider "aws" {
-  region = "ap-southeast-2"
+  region = "ap-southeast-2" # Specify your preferred AWS region
 }
 
-# Create a VPC
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+# Key pair resource for SSH access to EC2
+resource "aws_key_pair" "ec2_key" {
+  key_name   = "sivasaiaws" # Change to your key name
+  public_key = file("~/.ssh/id_rsa.pub") # Path to your public key
 }
 
-# Create a subnet in the VPC
-resource "aws_subnet" "main" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "ap-southeast-2a"
-}
-
-# Create a security group allowing SSH
-resource "aws_security_group" "allow_ssh" {
-  vpc_id = aws_vpc.main.id
+# Security group allowing SSH and HTTP access
+resource "aws_security_group" "allow_ssh_http" {
+  name        = "allow_ssh_http"
+  description = "Allow SSH and HTTP"
 
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Replace with your IP in production
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -31,15 +33,11 @@ resource "aws_security_group" "allow_ssh" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "allow_ssh"
-  }
 }
 
-# Create an IAM role for EC2 with CloudWatch permissions
+# IAM Role for EC2 with CloudWatch permissions
 resource "aws_iam_role" "ec2_role" {
-  name = "ec2-cloudwatch-role"
+  name = "EC2CloudWatchRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -50,8 +48,8 @@ resource "aws_iam_role" "ec2_role" {
           Service = "ec2.amazonaws.com"
         }
         Effect = "Allow"
-        Sid    = ""
-      },
+        Sid = ""
+      }
     ]
   })
 }
@@ -63,81 +61,80 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 }
 
 # Create an IAM instance profile
-resource "aws_iam_instance_profile" "ec2_instance_profiletod" {
-  name = "ec2_instance_profiletod"
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "ec2_instance_profile"
   role = aws_iam_role.ec2_role.name
 }
 
-# Create CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "ec2_log_group" {
-  name = "ec2-instance-log-group"
-  retention_in_days = 14
-}
-
-# EC2 Instance with Docker, GitHub, and CloudWatch configuration
-resource "aws_instance" "my_instance" {
-  ami                    = "ami-084e237ffb23f8f97"   # Amazon Linux 2 AMI
+# EC2 instance
+resource "aws_instance" "ec2_instance" {
+  ami                    = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
   instance_type          = "t2.micro"
-  key_name               = "sivasaiaws"          # Update with your key pair
-  associate_public_ip_address = true
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profiletod.name
-  vpc_security_group_ids = [aws_security_group.allow_ssh.id]
-  subnet_id              = aws_subnet.main.id
+  key_name               = aws_key_pair.ec2_key.key_name
 
-  user_data = <<-EOF
-  #!/bin/bash
-  # Update system packages and install Git and Docker
-  sudo yum update -y
-  sudo yum install git docker -y
-  sudo service docker start
-  sudo systemctl enable docker
-  sudo usermod -a -G docker ec2-user
+  vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
 
-  # Configure SSH for GitHub
-  mkdir -p /home/ec2-user/.ssh
-  chmod 700 /home/ec2-user/.ssh
-  echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCjoUeXy2Om49/goSfu6AJvzfFObgmOQjoWsb+fFEBFNDUwaHWIWL6x8vMHXE3MhLCgIsFMUuvkI65mWgieTdyJofHr4A8vCz1urja2Otdc0RB0rm5wmU3zTrHZ2ysfGN3n4iXHINTZENOvImJGQ61E/zcnYwHp3TBifbvsbHLVqchctjbUqGhkuNbsVnAzA3xnr/Licl1+zt9pOpBcc9sVJTJMl5Uwoc7GQK3pVBCDIbsVH6GWmpD6XXVuyeyPNn+dHgQpVJCJEtAEa83U0mlkIALf/bSu4XBiqIl/475X2J7kAruDF+lKwoO3M6rBFimLZlbEsHR1cuFNencSciOb" > /home/ec2-user/.ssh/id_rsa
-  chmod 600 /home/ec2-user/.ssh/id_rsa
-  ssh-keyscan github.com >> /home/ec2-user/.ssh/known_hosts
-  chown -R ec2-user:ec2-user /home/ec2-user/.ssh
-
-  # Clone your private GitHub repository
-  su - ec2-user -c "git clone git@github.com:your-repo/agri-pass-backend.git /home/ec2-user/agri-pass-backend"
-
-  # Build Docker image and run the container
-  cd /home/ec2-user/agri-pass-backend
-  sudo docker build -t agri-pass-backend .
-  sudo docker run -d --name agri-pass-backend-container agri-pass-backend
-
-  # Install CloudWatch Agent
-  sudo yum install amazon-cloudwatch-agent -y
-
-  # Create CloudWatch configuration file
-  cat <<EOT > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-  {
-    "logs": {
-      "logs_collected": {
-        "files": {
-          "collect_list": [
-            {
-              "file_path": "/home/ec2-user/agri-pass-backend/logs/container.log",
-              "log_group_name": "ec2-instance-log-group",
-              "log_stream_name": "{instance_id}-container-log",
-              "timestamp_format": "%b %d %H:%M:%S"
-            }
-          ]
-        }
-      }
-    }
-  }
-  EOT
-
-  # Start CloudWatch Agent
-  sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a start -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-
-  EOF
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name # Associate the instance profile
 
   tags = {
-    Name = "EC2-Docker-GitHub-CloudWatch"
+    Name = "MyEC2Instance"
   }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo yum update -y",
+      "sudo yum install docker git -y",
+      "sudo systemctl start docker",
+      "sudo systemctl enable docker",
+      "sudo yum install -y amazon-cloudwatch-agent",
+      "sudo mkdir -p /home/ec2-user/agri-pass-backend/logs", # Ensure logs directory exists
+      "su - ec2-user -c 'git clone git@github.com:your-repo/agri-pass-backend.git /home/ec2-user/agri-pass-backend'",
+      "cd /home/ec2-user/agri-pass-backend",
+      "sudo docker build -t agri-pass-backend .",
+      "sudo docker run -d --name agri-pass-backend-container -p 80:80 agri-pass-backend",
+      # Create CloudWatch configuration file
+      "sudo cat <<EOT > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json\n" +
+      "{\n" +
+      "  \"logs\": {\n" +
+      "    \"logs_collected\": {\n" +
+      "      \"files\": {\n" +
+      "        \"collect_list\": [\n" +
+      "          {\n" +
+      "            \"file_path\": \"/home/ec2-user/agri-pass-backend/logs/container.log\",\n" +
+      "            \"log_group_name\": \"ec2-instance-log-group\",\n" +
+      "            \"log_stream_name\": \"{instance_id}-container-log\",\n" +
+      "            \"timestamp_format\": \"%b %d %H:%M:%S\"\n" +
+      "          }\n" +
+      "        ]\n" +
+      "      }\n" +
+      "    }\n" +
+      "  }\n" +
+      "}\n" +
+      "EOT",
+      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a start -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = "ec2-user"
+      private_key = file("~/.ssh/id_rsa")  # Path to your private key
+      host        = self.public_ip
+    }
+  }
+}
+
+# CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "log_group" {
+  name              = "/docker/logs"
+  retention_in_days = 30
+}
+
+# CloudWatch Log Stream
+resource "aws_cloudwatch_log_stream" "log_stream" {
+  name           = "my_stream"
+  log_group_name = aws_cloudwatch_log_group.log_group.name
+}
+
+output "ec2_instance_public_ip" {
+  value = aws_instance.ec2_instance.public_ip
 }
