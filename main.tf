@@ -95,7 +95,7 @@ resource "null_resource" "provision_ec2" {
       "sudo systemctl enable docker",
       "sudo mkdir -p /var/log/docker_logs",
       "ssh-keyscan github.com >> ~/.ssh/known_hosts",  
-      "git clone https://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@github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend",
+      "git clone https://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@github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend",
       "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
