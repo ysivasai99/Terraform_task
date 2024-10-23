@@ -63,8 +63,8 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 }
 
 # Create an IAM instance profile
-resource "aws_iam_instance_profile" "ec2_instance_profileaas" {
-  name = "ec2_instance_profileaas"
+resource "aws_iam_instance_profile" "ec2_instance_profiletod" {
+  name = "ec2_instance_profiletod"
   role = aws_iam_role.ec2_role.name
 }
 
@@ -80,7 +80,7 @@ resource "aws_instance" "my_instance" {
   instance_type          = "t2.micro"
   key_name               = "sivasaiaws"          # Update with your key pair
   associate_public_ip_address = true
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profileaas.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profiletod.name
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
   subnet_id              = aws_subnet.main.id
 
