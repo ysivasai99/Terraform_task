@@ -65,8 +65,8 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 }
 
 # Create an IAM instance profile
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile"
+resource "aws_iam_instance_profile" "ec2_instance_profile123" {
+  name = "ec2_instance_profile123"
   role = aws_iam_role.ec2_role.name
 }
 
@@ -74,9 +74,9 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
   instance_type          = "t2.micro"
-  key_name               = aws_key_pair.generated_key.key_name
+  key_name               = aws_key_pair.generated_key.sivasaiaws
   vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile123.name
 
   tags = {
     Name = "MyEC2Instance"
