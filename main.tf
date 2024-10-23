@@ -129,4 +129,18 @@ resource "null_resource" "provision_ec2" {
       type        = "ssh"
       user        = "ec2-user"
       private_key = tls_private_key.ec2_key.private_key_pem
-      ho…
+      host        = aws_instance.ec2_instance.public_ip
+    }
+  }
+}
+
+# CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "log_group" {
+  name              = "docker-logs"
+  retention_in_days = 30
+}
+
+# Output public IP of the instance
+output "ec2_instance_public_ip" {
+  value = aws_instance.ec2_instance.public_ip
+}
