@@ -88,15 +88,12 @@ resource "null_resource" "provision_ec2" {
   depends_on = [aws_instance.ec2_instance] # Ensure the instance is created before running
 
   provisioner "remote-exec" {
-    inline = [
-      "sudo yum update -y",
-      "sudo yum install docker git amazon-cloudwatch-agent -y", 
-      "sudo systemctl start docker",
-      "sudo systemctl enable docker",
-      "sudo mkdir -p /var/log/docker_logs",
-      "ssh-keyscan github.com >> ~/.ssh/known_hosts",  
-      "git clone https://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@github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend",
-      "cd /home/ec2-user/agri-pass-backend",
+  inline = [
+    "sudo yum update -y",
+    "sudo yum install docker git amazon-cloudwatch-agent -y", 
+    "git --version",  # To check git is installed
+    "git clone https://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@github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend 2>&1 | tee /home/ec2-user/git-clone-output.txt",  # Save output to a file for troubleshooting
+     "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
 
