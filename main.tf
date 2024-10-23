@@ -2,15 +2,14 @@ provider "aws" {
   region = "ap-southeast-2" # Specify your preferred AWS region
 }
 
-# Generate new SSH key pair using Terraform
+# Generate a new EC2 Key Pair
 resource "tls_private_key" "ec2_key" {
   algorithm = "RSA"
-  rsa_bits  = 2048
+  rsa_bits  = 4096
 }
 
-# AWS key pair resource, using the public key from the generated key
-resource "aws_key_pair" "ec2_key" {
-  key_name   = "sivasaiaws" # Name of the key
+resource "aws_key_pair" "generated_key" {
+  key_name   = "sivasaiaws" # Key name for EC2
   public_key = tls_private_key.ec2_key.public_key_openssh
 }
 
@@ -41,13 +40,43 @@ resource "aws_security_group" "allow_ssh_http" {
   }
 }
 
+# IAM role for EC2 to allow CloudWatch access
+resource "aws_iam_role" "ec2_role" {
+  name = "ec2_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Attach CloudWatchFullAccess policy to the IAM role
+resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+  role       = aws_iam_role.ec2_role.name
+}
+
+# Create an IAM instance profile
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "ec2_instance_profile"
+  role = aws_iam_role.ec2_role.name
+}
+
 # EC2 instance
 resource "aws_instance" "ec2_instance" {
-  ami           = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
-  instance_type = "t2.micro"
-  key_name      = aws_key_pair.ec2_key.key_name  # Use the generated key pair
-
+  ami                    = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
+  instance_type          = "t2.micro"
+  key_name               = aws_key_pair.generated_key.key_name
   vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
 
   tags = {
     Name = "MyEC2Instance"
@@ -62,33 +91,37 @@ resource "aws_instance" "ec2_instance" {
       "sudo yum install -y awslogs",
       "sudo service awslogs start",
       "sudo mkdir -p /var/log/docker_logs",
-	  
-      "git clone https://github.com/agri-pass/agri-pass-backend.git",
-      "cd project",
+
+      # Clone the repository via HTTPS (since no SSH key)
+      "git clone https://github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend",
+      "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
-      "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=/docker/logs --log-opt awslogs-stream=my_stream --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
+      "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream={instance_id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
 
       # Install CloudWatch Agent
       "sudo yum install amazon-cloudwatch-agent -y",
 
-      # Create CloudWatch Agent configuration file
-      "sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL\n" +
-      "{\n" +
-      "  \"logs\": {\n" +
-      "    \"logs_collected\": {\n" +
-      "      \"files\": {\n" +
-      "        \"collect_list\": [\n" +
-      "          {\n" +
-      "            \"file_path\": \"/var/lib/docker/containers/*.log\",\n" +
-      "            \"log_group_name\": \"docker-logs\",\n" +
-      "            \"log_stream_name\": \"{instance_id}\"\n" +
-      "          }\n" +
-      "        ]\n" +
-      "      }\n" +
-      "    }\n" +
-      "  }\n" +
-      "}\n" +
-      "EOL'",
+      # Create CloudWatch Agent configuration file using a heredoc
+      <<-EOF
+      sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
+      {
+        "logs": {
+          "logs_collected": {
+            "files": {
+              "collect_list": [
+                {
+                  "file_path": "/var/lib/docker/containers/*.log",
+                  "log_group_name": "docker-logs",
+                  "log_stream_name": "{instance_id}"
+                }
+              ]
+            }
+          }
+        }
+      }
+      EOL'
+      EOF
+      ,
 
       # Start CloudWatch Agent
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a start -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
@@ -97,7 +130,7 @@ resource "aws_instance" "ec2_instance" {
     connection {
       type        = "ssh"
       user        = "ec2-user"
-      private_key = tls_private_key.ec2_key.private_key_pem # Use the generated private key for SSH
+      private_key = tls_private_key.ec2_key.private_key_pem
       host        = self.public_ip
     }
   }
@@ -105,22 +138,11 @@ resource "aws_instance" "ec2_instance" {
 
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "log_group" {
-  name              = "docker-logs"  # CloudWatch log group for Docker logs
+  name              = "docker-logs"
   retention_in_days = 30
 }
 
-# CloudWatch Log Stream
-resource "aws_cloudwatch_log_stream" "log_stream" {
-  name           = "my_stream"
-  log_group_name = aws_cloudwatch_log_group.log_group.name
-}
-
+# Output public IP of the instance
 output "ec2_instance_public_ip" {
   value = aws_instance.ec2_instance.public_ip
-}
-
-# Output the private key
-output "private_key" {
-  value     = tls_private_key.ec2_key.private_key_pem
-  sensitive = true # Ensures the private key doesn't show in plaintext
 }
