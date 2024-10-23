@@ -5,7 +5,7 @@ provider "aws" {
 # Key pair resource for SSH access to EC2
 resource "aws_key_pair" "ec2_key" {
   key_name   = "sivasaiaws" # Change to your key name
-  public_key = file("~/.ssh/id_rsa.pub") # Path to your public key
+  public_key = file("/c/Users/ysiva/.ssh/id_rsa.pub") # Path to your public key
 }
 
 # Security group allowing SSH and HTTP access
@@ -70,7 +70,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
   instance_type          = "t2.micro"
-  key_name               = aws_key_pair.ec2_key.key_name
+  key_name               = sivasaiaws
 
   vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
 
@@ -117,7 +117,7 @@ resource "aws_instance" "ec2_instance" {
     connection {
       type        = "ssh"
       user        = "ec2-user"
-      private_key = file("~/.ssh/id_rsa")  # Path to your private key
+      private_key = file("/c/Users/ysiva/.ssh/id_rsa")  # Path to your private key
       host        = self.public_ip
     }
   }
