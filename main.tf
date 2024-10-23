@@ -78,7 +78,7 @@ resource "aws_cloudwatch_log_group" "ec2_log_group" {
 resource "aws_instance" "my_instance" {
   ami                    = "ami-084e237ffb23f8f97"   # Amazon Linux 2 AMI
   instance_type          = "t2.micro"
-  key_name               = "personalawskey"          # Update with your key pair
+  key_name               = "sivasaiaws"          # Update with your key pair
   associate_public_ip_address = true
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profileaas.name
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
