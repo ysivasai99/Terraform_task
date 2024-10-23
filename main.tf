@@ -101,16 +101,17 @@ resource "null_resource" "provision_ec2" {
       "sudo docker build -t myproject .",
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
 
-      "sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
+      <<-EOF
+      sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
       {
-        \"logs\": {
-          \"logs_collected\": {
-            \"files\": {
-              \"collect_list\": [
+        "logs": {
+          "logs_collected": {
+            "files": {
+              "collect_list": [
                 {
-                  \"file_path\": \"/var/lib/docker/containers/*.log\",
-                  \"log_group_name\": \"docker-logs\",
-                  \"log_stream_name\": \"${aws_instance.ec2_instance.id}\"
+                  "file_path": "/var/lib/docker/containers/*.log",
+                  "log_group_name": "docker-logs",
+                  "log_stream_name": "${aws_instance.ec2_instance.id}"
                 }
               ]
             }
@@ -118,7 +119,8 @@ resource "null_resource" "provision_ec2" {
         }
       }
       EOL'
-      ",
+      EOF
+      ,
 
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a start -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
     ]
@@ -127,4 +129,4 @@ resource "null_resource" "provision_ec2" {
       type        = "ssh"
       user        = "ec2-user"
       private_key = tls_private_key.ec2_key.private_key_pem
-      hos…
+      ho…
