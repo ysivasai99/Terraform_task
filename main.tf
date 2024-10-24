@@ -121,7 +121,7 @@ resource "null_resource" "provision_ec2" {
       "cd /home/ec2-user/your-private-repo && sudo docker build -t myproject .",
 
       # Run the Docker container, outputting logs to CloudWatch
-      "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 myproject"
+      "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 myproject",
 	  
 	  <<-EOF
       sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
