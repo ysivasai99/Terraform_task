@@ -88,7 +88,7 @@ resource "null_resource" "provision_ec2" {
   depends_on = [aws_instance.ec2_instance] # Ensure the instance is created before running
 
   provisioner "remote-exec" {
-  //inline = [
+  inline = [
     "sudo yum update -y",
     "sudo yum install docker git amazon-cloudwatch-agent -y", 
     "git --version",  # To check git is installed
