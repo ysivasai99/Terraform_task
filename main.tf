@@ -105,20 +105,26 @@ resource "aws_instance" "ec2_instance" {
 # Remote provisioning and log setup using null_resource
 resource "null_resource" "provision_ec2" {
   depends_on = [aws_instance.ec2_instance]
+# Remote provisioning and log setup using null_resource
+resource "null_resource" "provision_ec2" {
+  depends_on = [aws_instance.ec2_instance]
 
   provisioner "remote-exec" {
     inline = [
       "sudo yum update -y",
-      "sudo yum install docker git amazon-cloudwatch-agent -y", 
+      "sudo yum install docker git amazon-cloudwatch-agent -y",
       "git --version",  # To check git is installed
 
-      # Use the GitHub token to securely clone the private repo
-      "git clone https://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@github.com/agri-pass/agri-pass-backend.git 
-      "cd /home/ec2-user/agri-pass-backend",
-      "sudo docker build -t myproject .",
-      "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
+      # Set the GitHub token as an environment variable (replace with your real token)
+      "export GITHUB_TOKEN=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",
 
-      <<-EOF
+      # Use the token to clone the private repository
+      "git clone https://${GITHUB_TOKEN}@github.com/your-username/your-private-repo.git /home/ec2-user/your-private-repo 2>&1 | tee /home/ec2-user/git-clone-output.txt",
+
+      "cd /home/ec2-user/your-private-repo",
+      "sudo docker build -t myproject .",
+      "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject"
+       <<-EOF
       sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
       {
         "logs": {
@@ -157,7 +163,7 @@ resource "aws_cloudwatch_log_group" "log_group" {
   retention_in_days = 30
 }
 
-# Output public IP of the instance
+# Output public IP of the instance (should be outside the resource block)
 output "ec2_instance_public_ip" {
   value = aws_instance.ec2_instance.public_ip
 }
