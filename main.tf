@@ -115,7 +115,7 @@ resource "null_resource" "provision_ec2" {
       "ssh-keyscan -t rsa github.com >> /home/ec2-user/.ssh/known_hosts",
 
       # Clone the private repository using SSH (add the public key to GitHub first)
-      "git clone git@github.com:agri-pass/agri-pass-backend.git /agri-pass-backend",
+      "sudo git clone git@github.com:agri-pass/agri-pass-backend.git /agri-pass-backend",
 
       # Build the Docker image from the repository (if Dockerfile exists)
       "cd agri-pass-backend && sudo docker build -t myproject .",
