@@ -1,4 +1,3 @@
-chatgpt
 provider "aws" {
   region = "ap-southeast-2" # Specify your preferred AWS region
 }
