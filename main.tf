@@ -9,7 +9,7 @@ resource "tls_private_key" "ec2_key" {
 }
 
 resource "aws_key_pair" "generated_key" {
-  key_name   = "taask" # Key name for EC2
+  key_name   = "taskkey" # Key name for EC2
   public_key = tls_private_key.ec2_key.public_key_openssh
 }
 
@@ -84,51 +84,51 @@ resource "aws_instance" "ec2_instance" {
 }
 
 # Remote provisioning and log setup using null_resource to avoid cycle
-resource "null_resource" "provision_ec2" {
-  depends_on = [aws_instance.ec2_instance] # Ensure the instance is created before running
+# resource "null_resource" "provision_ec2" {
+#   depends_on = [aws_instance.ec2_instance] # Ensure the instance is created before running
 
-  provisioner "remote-exec" {
-  inline = [
-    "sudo yum update -y",
-    "sudo yum install docker git amazon-cloudwatch-agent -y", 
-    "git --version",  # To check git is installed
-    "export GITHUB_TOKEN=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",
-    "git clone https://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@github.com/agri-pass/agri-pass-backend.git", 
-    "sudo docker build -t myproject .",
-    "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
+#   provisioner "remote-exec" {
+#   inline = [
+#     "sudo yum update -y",
+#     "sudo yum install docker git amazon-cloudwatch-agent -y", 
+#     "git --version",  # To check git is installed
+#     "export GITHUB_TOKEN=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",
+#     "git clone https://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@github.com/agri-pass/agri-pass-backend.git", 
+#     "sudo docker build -t myproject .",
+#     "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
 
-      <<-EOF
-      sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
-      {
-        "logs": {
-          "logs_collected": {
-            "files": {
-              "collect_list": [
-                {
-                  "file_path": "/var/lib/docker/containers/*.log",
-                  "log_group_name": "docker-logs",
-                  "log_stream_name": "${aws_instance.ec2_instance.id}"
-                }
-              ]
-            }
-          }
-        }
-      }
-      EOL'
-      EOF
-      ,
+#       <<-EOF
+#       sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
+#       {
+#         "logs": {
+#           "logs_collected": {
+#             "files": {
+#               "collect_list": [
+#                 {
+#                   "file_path": "/var/lib/docker/containers/*.log",
+#                   "log_group_name": "docker-logs",
+#                   "log_stream_name": "${aws_instance.ec2_instance.id}"
+#                 }
+#               ]
+#             }
+#           }
+#         }
+#       }
+#       EOL'
+#       EOF
+#       ,
 
-      "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a start -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
-    ]
+#       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a start -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+#     ]
 
-    connection {
-      type        = "ssh"
-      user        = "ec2-user"
-      private_key = tls_private_key.ec2_key.private_key_pem
-      host        = aws_instance.ec2_instance.public_ip
-    }
-  }
-}
+#     connection {
+#       type        = "ssh"
+#       user        = "ec2-user"
+#       private_key = tls_private_key.ec2_key.private_key_pem
+#       host        = aws_instance.ec2_instance.public_ip
+#     }
+#   }
+# }
 
 # CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "log_group" {
