@@ -9,13 +9,13 @@ resource "tls_private_key" "ec2_key" {
 }
 
 resource "aws_key_pair" "generated_key" {
-  key_name   = "tasksksk"
+  key_name   = "taskskskss"
   public_key = tls_private_key.ec2_key.public_key_openssh
 }
 
 # Security Group to allow SSH access and HTTP/HTTPS if needed
-resource "aws_security_group" "allow_ssh_https" {
-  name        = "allow_ssh_https"
+resource "aws_security_group" "allow_ssh_httpss" {
+  name        = "allow_ssh_httpss"
   description = "Allow SSH, HTTP, and HTTPS"
 
   ingress {
@@ -72,8 +72,8 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 }
 
 # Create IAM instance profile
-resource "aws_iam_instance_profile" "ec2_instance_profile67" {
-  name = "ec2_instance_profile67"
+resource "aws_iam_instance_profile" "ec2_instance_profile45767" {
+  name = "ec2_instance_profile45767"
   role = aws_iam_role.ec2_role.name
 }
 
@@ -82,8 +82,8 @@ resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type          = "t3.micro"
   key_name               = aws_key_pair.generated_key.key_name
-  vpc_security_group_ids = [aws_security_group.allow_ssh_https.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile67.name
+  vpc_security_group_ids = [aws_security_group.allow_ssh_httpss.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile45767.name
 
   tags = {
     Name = "MyEC2Instance"
