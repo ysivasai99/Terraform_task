@@ -33,10 +33,11 @@ resource "null_resource" "provision_ec2" {
       "sleep 20",
 
       # Clone the private repository into /home/ec2-user directory where ec2-user has write permissions
-      "git clone git@github.com:agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend",
+      "git clone git@github.com:agri-pass/agri-pass-backend.git",
 
       # Build the Docker image from the repository (if Dockerfile exists)
-      "cd /home/ec2-user/agri-pass-backend && sudo docker build -t myproject .",
+      "cd agri-pass-backend",
+      "sudo docker build -t myproject .",
 
       # Run the Docker container, outputting logs to CloudWatch
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 myproject",
