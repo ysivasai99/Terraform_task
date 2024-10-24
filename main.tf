@@ -9,13 +9,13 @@ resource "tls_private_key" "ec2_key" {
 }
 
 resource "aws_key_pair" "generated_key" {
-  key_name   = "sivasaipem" # Key name for EC2
+  key_name   = "taskpem" # Key name for EC2
   public_key = tls_private_key.ec2_key.public_key_openssh
 }
 
 # Security group allowing SSH, HTTP, and HTTPS access
-resource "aws_security_group" "allow_ssh_http321" {
-  name        = "allow_ssh_http321"
+resource "aws_security_group" "allow_ssh_http456" {
+  name        = "allow_ssh_http456"
   description = "Allow SSH, HTTP, and HTTPS"
 
   ingress {
@@ -77,8 +77,8 @@ resource "aws_iam_role_policy_attachment" "ssm_access" {
 }
 
 # Create an IAM instance profile
-resource "aws_iam_instance_profile" "ec2_instance_profile321" {
-  name = "ec2_instance_profile321"
+resource "aws_iam_instance_profile" "ec2_instance_profile456" {
+  name = "ec2_instance_profile456"
   role = aws_iam_role.ec2_role.name
 }
 
@@ -87,8 +87,8 @@ resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
   instance_type          = "t3.micro"
   key_name               = aws_key_pair.generated_key.key_name
-  vpc_security_group_ids = [aws_security_group.allow_ssh_http321.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile321.name
+  vpc_security_group_ids = [aws_security_group.allow_ssh_http456.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile456.name
 
   tags = {
     Name = "MyEC2Instance"
