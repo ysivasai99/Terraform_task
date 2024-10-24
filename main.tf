@@ -9,13 +9,13 @@ resource "tls_private_key" "ec2_key" {
 }
 
 resource "aws_key_pair" "generated_key" {
-  key_name   = "taskpem" # Key name for EC2
+  key_name   = "taskpems" # Key name for EC2
   public_key = tls_private_key.ec2_key.public_key_openssh
 }
 
 # Security group allowing SSH, HTTP, and HTTPS access
-resource "aws_security_group" "allow_ssh_http456" {
-  name        = "allow_ssh_http456"
+resource "aws_security_group" "allow_ssh_http543" {
+  name        = "allow_ssh_http543"
   description = "Allow SSH, HTTP, and HTTPS"
 
   ingress {
@@ -84,8 +84,8 @@ resource "aws_iam_role_policy_attachment" "ssm_access" {
 }
 
 # Create an IAM instance profile
-resource "aws_iam_instance_profile" "ec2_instance_profile456" {
-  name = "ec2_instance_profile456"
+resource "aws_iam_instance_profile" "ec2_instance_profile543" {
+  name = "ec2_instance_profile543"
   role = aws_iam_role.ec2_role.name
 }
 
@@ -94,8 +94,8 @@ resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
   instance_type          = "t3.micro"
   key_name               = aws_key_pair.generated_key.key_name
-  vpc_security_group_ids = [aws_security_group.allow_ssh_http456.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile456.name
+  vpc_security_group_ids = [aws_security_group.allow_ssh_http543.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile543.name
 
   tags = {
     Name = "MyEC2Instance"
@@ -113,7 +113,7 @@ resource "null_resource" "provision_ec2" {
       "git --version",  # To check git is installed
 
       # Use the GitHub token to securely clone the private repo
-      "git clone https://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@github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend 2>&1 | tee /home/ec2-user/git-clone-output.txt",  # Save output to a file for troubleshooting
+      "git clone https://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@github.com/agri-pass/agri-pass-backend.git 
       "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
