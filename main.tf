@@ -103,12 +103,15 @@ resource "null_resource" "provision_ec2" {
     inline = [
       "sudo yum update -y",
       "sudo yum install docker git amazon-cloudwatch-agent -y", 
+      "sleep 30"
       "git --version",  # To check git is installed
       "git clone https://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@github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend 2>&1 | tee /home/ec2-user/git-clone-output.txt",  # Save output to a file for troubleshooting
+      "sleep 30"
       "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
+      "sleep 30"
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
-
+      "sleep 30"
       <<-EOF
       sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
       {
