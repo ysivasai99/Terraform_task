@@ -111,6 +111,8 @@ resource "null_resource" "provision_ec2" {
       "sudo yum update -y",
       "sudo yum install docker git amazon-cloudwatch-agent -y", 
       "git --version",  # To check git is installed
+
+      # Use the GitHub token to securely clone the private repo
       "git clone https://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@github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend 2>&1 | tee /home/ec2-user/git-clone-output.txt",  # Save output to a file for troubleshooting
       "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
