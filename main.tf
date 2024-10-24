@@ -14,8 +14,8 @@ resource "aws_key_pair" "generated_key" {
 }
 
 # Security Group to allow SSH access and HTTP/HTTPS if needed
-resource "aws_security_group" "allow_ssh_http" {
-  name        = "allow_ssh_http"
+resource "aws_security_group" "allow_ssh_https" {
+  name        = "allow_ssh_https"
   description = "Allow SSH, HTTP, and HTTPS"
 
   ingress {
@@ -82,7 +82,7 @@ resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97"  # Amazon Linux 2 AMI
   instance_type          = "t3.micro"
   key_name               = aws_key_pair.generated_key.key_name
-  vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
+  vpc_security_group_ids = [aws_security_group.allow_ssh_https.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile67.name
 
   tags = {
