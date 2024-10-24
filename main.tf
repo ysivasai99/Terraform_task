@@ -9,14 +9,14 @@ resource "tls_private_key" "ec2_key" {
 }
 
 resource "aws_key_pair" "generated_key" {
-  key_name   = "tsak" # Key name for EC2
+  key_name   = "taask" # Key name for EC2
   public_key = tls_private_key.ec2_key.public_key_openssh
 }
 
-# Security group allowing SSH, HTTP, and HTTPS access
-resource "aws_security_group" "allow_ssh_http654" {
-  name        = "allow_ssh_http654"
-  description = "Allow SSH, HTTP, and HTTPS"
+# Security group allowing SSH and HTTP access
+resource "aws_security_group" "allow_ssh_http6381" {
+  name        = "allow_ssh_http6381"
+  description = "Allow SSH and HTTP"
 
   ingress {
     from_port   = 22
@@ -28,13 +28,6 @@ resource "aws_security_group" "allow_ssh_http654" {
   ingress {
     from_port   = 80
     to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -65,20 +58,15 @@ resource "aws_iam_role" "ec2_role" {
   })
 }
 
-# Attach CloudWatchFullAccess and SSM policies to the IAM role for EC2
+# Attach CloudWatchFullAccess policy to the IAM role
 resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
   role       = aws_iam_role.ec2_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "ssm_access" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  role       = aws_iam_role.ec2_role.name
-}
-
 # Create an IAM instance profile
-resource "aws_iam_instance_profile" "ec2_instance_profile654" {
-  name = "ec2_instance_profile654"
+resource "aws_iam_instance_profile" "ec2_instance_profile6381" {
+  name = "ec2_instance_profile6381"
   role = aws_iam_role.ec2_role.name
 }
 
@@ -87,24 +75,25 @@ resource "aws_instance" "ec2_instance" {
   ami                    = "ami-084e237ffb23f8f97" # Amazon Linux 2 AMI
   instance_type          = "t3.micro"
   key_name               = aws_key_pair.generated_key.key_name
-  vpc_security_group_ids = [aws_security_group.allow_ssh_http654.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile654.name
+  vpc_security_group_ids = [aws_security_group.allow_ssh_http6381.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile6381.name
 
   tags = {
     Name = "MyEC2Instance"
   }
 }
 
-# Remote provisioning and log setup using null_resource
+# Remote provisioning and log setup using null_resource to avoid cycle
 resource "null_resource" "provision_ec2" {
-  depends_on = [aws_instance.ec2_instance]
+  depends_on = [aws_instance.ec2_instance] # Ensure the instance is created before running
 
   provisioner "remote-exec" {
-    inline = [
-      "sudo yum update -y",
-      "sudo yum install docker git amazon-cloudwatch-agent -y", 
-      "git --version",  # To check git is installed
-      "git clone https://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/agri-pass/agri-pass-backend.git
+  inline = [
+    "sudo yum update -y",
+    "sudo yum install docker git amazon-cloudwatch-agent -y", 
+    "git --version",  # To check git is installed
+    "git clone https://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@github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend 2>&1 | tee /home/ec2-user/git-clone-output.txt",  # Save output to a file for troubleshooting
+     "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
 
@@ -151,5 +140,3 @@ resource "aws_cloudwatch_log_group" "log_group" {
 output "ec2_instance_public_ip" {
   value = aws_instance.ec2_instance.public_ip
 }
-
-
