@@ -9,7 +9,7 @@ resource "tls_private_key" "ec2_key" {
 }
 
 resource "aws_key_pair" "generated_key" {
-  key_name   = "taskpem" # Key name for EC2
+  key_name   = "sivasaipem" # Key name for EC2
   public_key = tls_private_key.ec2_key.public_key_openssh
 }
 
@@ -47,7 +47,7 @@ resource "aws_security_group" "allow_ssh_http456" {
   }
 }
 
-# IAM role for EC2 to allow CloudWatch access
+# IAM role for EC2 to allow CloudWatch access and ECS access
 resource "aws_iam_role" "ec2_role" {
   name = "ec2_role"
 
@@ -65,12 +65,19 @@ resource "aws_iam_role" "ec2_role" {
   })
 }
 
-# Attach CloudWatchFullAccess and SSM policies to the IAM role for EC2
+# Attach CloudWatchFullAccess policy to the IAM role
 resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
   role       = aws_iam_role.ec2_role.name
 }
 
+# Attach the AmazonEC2ContainerServiceforEC2Role policy to the IAM role
+resource "aws_iam_role_policy_attachment" "ecs_service_role" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+  role       = aws_iam_role.ec2_role.name
+}
+
+# Attach the SSM access policy for Systems Manager (optional for debugging)
 resource "aws_iam_role_policy_attachment" "ssm_access" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   role       = aws_iam_role.ec2_role.name
@@ -103,15 +110,12 @@ resource "null_resource" "provision_ec2" {
     inline = [
       "sudo yum update -y",
       "sudo yum install docker git amazon-cloudwatch-agent -y", 
-      "sleep 30"
       "git --version",  # To check git is installed
       "git clone https://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@github.com/agri-pass/agri-pass-backend.git /home/ec2-user/agri-pass-backend 2>&1 | tee /home/ec2-user/git-clone-output.txt",  # Save output to a file for troubleshooting
-      "sleep 30"
       "cd /home/ec2-user/agri-pass-backend",
       "sudo docker build -t myproject .",
-      "sleep 30"
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 -v /var/log/docker_logs:/var/log/app_logs myproject",
-      "sleep 30"
+
       <<-EOF
       sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
       {
