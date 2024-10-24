@@ -90,7 +90,13 @@ resource "aws_instance" "ec2_instance" {
   }
 }
 
-# Provisioning the EC2 instance to generate SSH keys and clone the private repository
+# CloudWatch Log Group for Docker logs
+resource "aws_cloudwatch_log_group" "log_group" {
+  name              = "docker-logs"
+  retention_in_days = 30
+}
+
+# Provisioning the EC2 instance to clone the private GitHub repository
 resource "null_resource" "provision_ec2" {
   depends_on = [aws_instance.ec2_instance]
 
@@ -114,16 +120,20 @@ resource "null_resource" "provision_ec2" {
       # Add GitHub to the known hosts to avoid manual confirmation when connecting
       "ssh-keyscan -t rsa github.com >> /home/ec2-user/.ssh/known_hosts",
 
-      # Clone the private repository using SSH (add the public key to GitHub first)
-      "sudo git clone git@github.com:agri-pass/agri-pass-backend.git /agri-pass-backend",
+      # Sleep to give time for the public key to be added to GitHub
+      "sleep 60",
+
+      # Clone the private repository using SSH (Ensure public key is added to GitHub first)
+      "git clone git@github.com:agri-pass/agri-pass-backend.git /agri-pass-backend",
 
       # Build the Docker image from the repository (if Dockerfile exists)
-      "cd agri-pass-backend && sudo docker build -t myproject .",
+      "cd /agri-pass-backend && sudo docker build -t myproject .",
 
       # Run the Docker container, outputting logs to CloudWatch
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 myproject",
-	  
-	  <<-EOF
+
+      # Configure CloudWatch agent
+      <<-EOF
       sudo bash -c 'cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOL
       {
         "logs": {
@@ -143,11 +153,11 @@ resource "null_resource" "provision_ec2" {
       EOL'
       EOF
       ,
-
+      
+      # Start the CloudWatch agent to monitor logs
       "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a start -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
     ]
 
-    # SSH connection to the instance for remote execution
     connection {
       type        = "ssh"
       user        = "ec2-user"
@@ -155,12 +165,6 @@ resource "null_resource" "provision_ec2" {
       host        = aws_instance.ec2_instance.public_ip
     }
   }
-}
-
-# CloudWatch Log Group for Docker logs
-resource "aws_cloudwatch_log_group" "log_group" {
-  name              = "docker-logs"
-  retention_in_days = 30
 }
 
 # Output public IP of the EC2 instance
