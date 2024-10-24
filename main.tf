@@ -9,7 +9,7 @@ resource "tls_private_key" "ec2_key" {
 }
 
 resource "aws_key_pair" "generated_key" {
-  key_name   = "taskpem"
+  key_name   = "tasksksk"
   public_key = tls_private_key.ec2_key.public_key_openssh
 }
 
@@ -72,8 +72,8 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
 }
 
 # Create IAM instance profile
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile"
+resource "aws_iam_instance_profile" "ec2_instance_profile67" {
+  name = "ec2_instance_profile67"
   role = aws_iam_role.ec2_role.name
 }
 
@@ -83,7 +83,7 @@ resource "aws_instance" "ec2_instance" {
   instance_type          = "t3.micro"
   key_name               = aws_key_pair.generated_key.key_name
   vpc_security_group_ids = [aws_security_group.allow_ssh_http.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile67.name
 
   tags = {
     Name = "MyEC2Instance"
