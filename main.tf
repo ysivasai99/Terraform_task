@@ -115,10 +115,10 @@ resource "null_resource" "provision_ec2" {
       "ssh-keyscan -t rsa github.com >> /home/ec2-user/.ssh/known_hosts",
 
       # Clone the private repository using SSH (add the public key to GitHub first)
-      "git clone git@github.com:your-username/your-private-repo.git /home/ec2-user/your-private-repo",
+      "git@github.com:agri-pass/agri-pass-backend.git /agri-pass-backend",
 
       # Build the Docker image from the repository (if Dockerfile exists)
-      "cd /home/ec2-user/your-private-repo && sudo docker build -t myproject .",
+      "cd agri-pass-backend && sudo docker build -t myproject .",
 
       # Run the Docker container, outputting logs to CloudWatch
       "sudo docker run -d -p 80:80 --log-driver=awslogs --log-opt awslogs-group=docker-logs --log-opt awslogs-stream=${aws_instance.ec2_instance.id} --log-opt awslogs-region=ap-southeast-2 myproject",
